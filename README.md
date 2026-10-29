@@ -45,7 +45,7 @@ See it in a window, control it with your mouse and keyboard, over USB or Wi-Fi. 
 You need Windows 10/11, the phone with **USB debugging on** ([how](docs/WINDOWS.md#step-1--turn-on-usb-debugging-on-the-phone)), and a data USB cable.
 
 ```powershell
-git clone https://github.com/Vighnesh2514/screenless C:\screenless
+git clone https://github.com/Vighnesh2514/screenless-android C:\screenless
 cd C:\screenless\windows
 powershell -ExecutionPolicy Bypass -File .\install.ps1     # installs scrcpy + a "Phone" Desktop shortcut
 powershell -ExecutionPolicy Bypass -File .\doctor.ps1      # optional: check tools, phone and saved IP
