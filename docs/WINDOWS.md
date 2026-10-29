@@ -22,7 +22,7 @@ Do this once. If the phone's screen is broken, use a USB-C OTG adapter with a mo
 ## Step 2 — Download this project
 
 **Code → Download ZIP** on the GitHub page, then extract it, for example to `C:\screenless`.
-Or with git: `git clone https://github.com/prutxvi/screenless C:\screenless`
+Or with git: `git clone https://github.com/Vighnesh2514/screenless C:\screenless`
 
 ## Step 3 — Run the installer
 

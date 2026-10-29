@@ -7,7 +7,7 @@
    ```
 3. Get the project and run it:
    ```bash
-   git clone https://github.com/prutxvi/screenless && cd screenless
+   git clone https://github.com/Vighnesh2514/screenless && cd screenless
    ./macos/phone.sh          # add "audio" to play the phone's sound on the Mac
    ```
 4. First time only: on the phone, tick **Always allow from this computer** → **Allow**. To skip the prompt with a key from another computer, copy `adbkey` and `adbkey.pub` into `~/.android/`, then run `adb kill-server`.

@@ -12,11 +12,11 @@ See it in a window, control it with your mouse and keyboard, over USB or Wi-Fi. 
 ![No root](https://img.shields.io/badge/root-not%20needed-ffffff?style=flat-square&labelColor=000)
 ![Powered by scrcpy](https://img.shields.io/badge/powered%20by-scrcpy-ffffff?style=flat-square&labelColor=000)
 
-**[Windows guide →](docs/WINDOWS.md)** &nbsp;·&nbsp; [Website](https://screenless-psi.vercel.app) &nbsp;·&nbsp; [macOS guide](docs/MACOS.md) &nbsp;·&nbsp; [Troubleshooting](docs/TROUBLESHOOTING.md)
+**[Windows guide →](docs/WINDOWS.md)** &nbsp;·&nbsp; [macOS guide](docs/MACOS.md) &nbsp;·&nbsp; [Troubleshooting](docs/TROUBLESHOOTING.md)
 
 </div>
 
-> Built by **[prutxvi](https://github.com/prutxvi)** with **Claude** (Anthropic's AI). My moto g30's display died but the phone still worked. I set the direction and made the calls; Claude did the diagnosis, measurements, scripts and docs.
+> Built by **[Vighnesh2514](https://github.com/Vighnesh2514)** with **Claude** (Anthropic's AI). My moto g30's display died but the phone still worked. I set the direction and made the calls; Claude did the diagnosis, measurements, scripts and docs.
 
 ## Contents
 - [Features](#features)
@@ -45,7 +45,7 @@ See it in a window, control it with your mouse and keyboard, over USB or Wi-Fi. 
 You need Windows 10/11, the phone with **USB debugging on** ([how](docs/WINDOWS.md#step-1--turn-on-usb-debugging-on-the-phone)), and a data USB cable.
 
 ```powershell
-git clone https://github.com/prutxvi/screenless C:\screenless
+git clone https://github.com/Vighnesh2514/screenless C:\screenless
 cd C:\screenless\windows
 powershell -ExecutionPolicy Bypass -File .\install.ps1     # installs scrcpy + a "Phone" Desktop shortcut
 powershell -ExecutionPolicy Bypass -File .\doctor.ps1      # optional: check tools, phone and saved IP
