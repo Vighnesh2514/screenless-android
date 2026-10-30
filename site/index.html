@@ -3,258 +3,833 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>screenless — use an Android phone with a broken screen from any laptop</title>
-<meta name="description" content="Mirror and control an Android phone from a Windows or Mac laptop over USB or Wi-Fi. No root, no app on the phone. Tested on Windows 11 with a moto g30.">
-<link rel="canonical" href="https://screenless-android.vercel.app/">
-
-<meta property="og:type" content="website">
-<meta property="og:url" content="https://screenless-android.vercel.app/">
-<meta property="og:title" content="screenless — Android mirroring from any laptop">
-<meta property="og:description" content="Broken phone screen? Use the phone from your laptop: mirror, mouse, keyboard, USB or Wi-Fi. No root. Tested on Windows 11 and macOS.">
+<title>screenless — use an Android phone from any laptop</title>
+<meta name="description" content="Put an Android phone with a broken screen in a window on your laptop. Mouse and keyboard control over USB or Wi-Fi. No root, no app on the phone.">
+<meta name="theme-color" content="#050505">
+<meta property="og:title" content="screenless — use an Android phone from any laptop">
+<meta property="og:description" content="A broken screen isn't a dead phone. Mirror and control Android from Windows or macOS over USB or Wi-Fi. No root, no app installed.">
 <meta property="og:image" content="https://screenless-android.vercel.app/media/og.png">
-<meta property="og:image:width" content="1200">
-<meta property="og:image:height" content="630">
+<meta property="og:type" content="website">
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="screenless — Android mirroring from any laptop">
-<meta name="twitter:description" content="Broken phone screen? Use the phone from your laptop. No root, no app on the phone.">
-<meta name="twitter:image" content="https://screenless-android.vercel.app/media/og.png">
-
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' fill='%23050505'/%3E%3Ccircle cx='10' cy='16' r='3' fill='%23ff2a2a'/%3E%3Ccircle cx='20' cy='16' r='3' fill='%23f5f5f5'/%3E%3C/svg%3E">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;600;700;800;900&display=swap" rel="stylesheet">
+<script>document.documentElement.classList.add("js");</script>
 <style>
   :root {
-    --bg: #000; --fg: #f5f5f5; --muted: #8a8a8a; --line: #222; --card: #0b0b0b;
-    --red: #ff2a2a; --code: #111;
+    --bg: #050505;
+    --fg: #f5f5f5;
+    --muted: #8c8c8c;
+    --line: #1d1d1d;
+    --card: #0b0b0b;
+    --red: #ff2a2a;
+    --red-dim: #7a1414;
+    --mono: "Space Mono", ui-monospace, SFMono-Regular, Menlo, monospace;
+    --sans: Inter, system-ui, -apple-system, "Segoe UI", sans-serif;
+    --ease: cubic-bezier(.2, .75, .2, 1);
   }
-  * { box-sizing: border-box; margin: 0; }
+
+  * { box-sizing: border-box; }
   html { scroll-behavior: smooth; }
-  body { background: var(--bg); color: var(--fg); font: 16px/1.6 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
-  a { color: var(--fg); }
-  img { max-width: 100%; display: block; }
-  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
-  .mono { font-family: "Space Mono", ui-monospace, monospace; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font: 16px/1.65 var(--sans);
+    -webkit-font-smoothing: antialiased;
+    overflow-x: hidden;
+  }
+  img, video { display: block; max-width: 100%; }
+  a { color: inherit; }
+  ::selection { background: var(--red); color: #000; }
 
-  /* nav */
-  .nav { position: sticky; top: 0; z-index: 20; background: rgba(0,0,0,.82); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
-  .nav-in { display: flex; align-items: center; justify-content: space-between; height: 60px; }
-  .brand { font: 700 18px/1 "Space Mono", monospace; text-decoration: none; letter-spacing: -.02em; }
-  .brand span { color: var(--red); }
-  .nav-links { display: flex; align-items: center; gap: 22px; font: 400 13px/1 "Space Mono", monospace; }
-  .nav-links a { color: var(--muted); text-decoration: none; }
+  .wrap { width: min(1120px, calc(100% - 40px)); margin-inline: auto; }
+  .mono { font-family: var(--mono); }
+  .accent { color: var(--red); }
+
+  /* ---------- scroll progress ---------- */
+  .progress {
+    position: fixed; inset: 0 0 auto 0; height: 2px; z-index: 100;
+    background: transparent; pointer-events: none;
+  }
+  .progress i {
+    display: block; height: 100%; width: 100%;
+    background: linear-gradient(90deg, var(--red), #ff7a4d);
+    transform: scaleX(0); transform-origin: 0 50%;
+  }
+
+  /* ---------- nav ---------- */
+  nav {
+    position: fixed; inset: 0 0 auto 0; z-index: 90;
+    border-bottom: 1px solid transparent;
+    transition: background .35s var(--ease), border-color .35s var(--ease), backdrop-filter .35s;
+  }
+  nav.scrolled {
+    background: rgba(5, 5, 5, .72);
+    border-bottom-color: var(--line);
+    backdrop-filter: blur(14px) saturate(140%);
+  }
+  .nav-inner {
+    display: flex; align-items: center; justify-content: space-between;
+    height: 68px;
+  }
+  .brand {
+    display: flex; align-items: center; gap: 10px;
+    font: 700 17px/1 var(--mono); letter-spacing: -.02em; text-decoration: none;
+  }
+  .brand-dot {
+    width: 11px; height: 11px; border-radius: 50%;
+    background: var(--red);
+    box-shadow: 0 0 0 0 rgba(255, 42, 42, .55);
+    animation: pulse 2.4s infinite;
+  }
+  @keyframes pulse {
+    0% { box-shadow: 0 0 0 0 rgba(255, 42, 42, .5); }
+    70% { box-shadow: 0 0 0 12px rgba(255, 42, 42, 0); }
+    100% { box-shadow: 0 0 0 0 rgba(255, 42, 42, 0); }
+  }
+  .nav-links { display: flex; align-items: center; gap: 26px; }
+  .nav-links a {
+    font: 400 13px/1 var(--mono); color: var(--muted);
+    text-decoration: none; letter-spacing: .04em;
+    transition: color .2s;
+  }
   .nav-links a:hover { color: var(--fg); }
-  .nav-gh { border: 1px solid var(--line); padding: 9px 12px; color: var(--fg) !important; }
-  @media (max-width: 720px) { .nav-links a:not(.nav-gh) { display: none; } }
+  .nav-cta {
+    padding: 10px 16px; border: 1px solid #333;
+    font: 700 12px/1 var(--mono) !important; color: var(--fg) !important;
+    transition: border-color .2s, background .2s, transform .2s;
+  }
+  .nav-cta:hover { border-color: var(--red); background: rgba(255, 42, 42, .08); transform: translateY(-1px); }
 
-  /* hero */
-  .hero { padding: 72px 0 56px; border-bottom: 1px solid var(--line); }
-  .hero-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; }
-  @media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; gap: 36px; } }
-  .tag { color: var(--red); font: 700 12px/1 "Space Mono", monospace; letter-spacing: .2em; text-transform: uppercase; }
-  h1 { font: 800 clamp(52px, 8vw, 92px)/0.95 Inter, sans-serif; letter-spacing: -.045em; margin: 18px 0 22px; }
-  h1 span { color: var(--red); }
-  .lede { font-size: clamp(17px, 2vw, 20px); color: #cfcfcf; max-width: 560px; }
-  .cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
-  .btn { display: inline-block; padding: 12px 18px; border: 1px solid var(--fg); text-decoration: none; font: 700 13px/1 "Space Mono", monospace; }
-  .btn.primary { background: var(--red); border-color: var(--red); color: #000; }
-  .btn:hover { opacity: .85; }
-  .hero-meta { margin-top: 22px; color: var(--muted); font: 12px/1.5 "Space Mono", monospace; }
-  .hero-meta b { color: #cfcfcf; font-weight: 400; }
-  .mirror-frame { border: 1px solid var(--line); background: var(--card); padding: 10px; box-shadow: 0 30px 90px rgba(0,0,0,.75); }
-  .mirror-frame img { width: 100%; height: auto; }
+  /* ---------- hero ---------- */
+  .hero {
+    position: relative; min-height: 100svh;
+    display: flex; flex-direction: column; justify-content: center;
+    padding: 120px 0 0; overflow: hidden;
+  }
+  #dots {
+    position: absolute; inset: 0; width: 100%; height: 100%;
+    opacity: .9; pointer-events: none;
+  }
+  .hero::after {
+    content: ""; position: absolute; inset: auto 0 0 0; height: 220px; z-index: 1;
+    background: linear-gradient(to top, var(--bg), transparent);
+    pointer-events: none;
+  }
+  .hero-grid {
+    position: relative; z-index: 2;
+    display: grid; grid-template-columns: 1.25fr .75fr;
+    gap: 48px; align-items: center;
+  }
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 10px;
+    font: 700 11px/1 var(--mono); letter-spacing: .22em;
+    color: var(--red); text-transform: uppercase; margin: 0 0 22px;
+  }
+  .eyebrow::before {
+    content: ""; width: 24px; height: 1px; background: var(--red);
+    transform: scaleX(0); transform-origin: 0 50%;
+    animation: lineIn .8s .1s var(--ease) forwards;
+  }
+  @keyframes lineIn { to { transform: scaleX(1); } }
+  h1 {
+    font: 900 clamp(44px, 5.4vw, 64px)/1 var(--sans);
+    letter-spacing: -.045em; margin: 0 0 24px;
+  }
+  h1 .line { display: block; }
+  .accent { color: var(--red); }
+  .lede {
+    font-size: clamp(17px, 1.7vw, 20px); color: #c9c9c9;
+    max-width: 520px; margin: 0 0 32px;
+  }
+  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-bottom: 30px; }
+  .btn {
+    display: inline-flex; align-items: center; gap: 10px;
+    padding: 14px 22px; text-decoration: none;
+    font: 700 13px/1 var(--mono); letter-spacing: .02em;
+    border: 1px solid #333; position: relative; overflow: hidden;
+    transition: transform .2s var(--ease), border-color .2s, color .2s;
+  }
+  .btn:hover { transform: translateY(-2px); }
+  .btn.primary {
+    background: var(--red); border-color: var(--red); color: #000;
+  }
+  .btn.primary::after {
+    content: ""; position: absolute; inset: 0;
+    background: linear-gradient(110deg, transparent 20%, rgba(255, 255, 255, .45) 50%, transparent 80%);
+    transform: translateX(-120%);
+    animation: shine 3.6s 1.4s infinite;
+  }
+  @keyframes shine { 0%, 55% { transform: translateX(-120%); } 100% { transform: translateX(120%); } }
+  .btn.ghost:hover { border-color: var(--red); }
+  .hero-meta {
+    display: flex; flex-wrap: wrap; gap: 8px 18px; padding: 0; margin: 0;
+    list-style: none; font: 400 11px/1.6 var(--mono); color: var(--muted);
+    letter-spacing: .08em; text-transform: uppercase;
+  }
+  .hero-meta li { display: flex; align-items: center; gap: 8px; }
+  .hero-meta li::before { content: "·"; color: var(--red); }
 
-  /* sections */
-  section { padding: 64px 0; border-bottom: 1px solid var(--line); }
-  h2 { font: 700 12px/1 "Space Mono", monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
-  .sub { font-size: clamp(20px, 2.6vw, 28px); font-weight: 700; letter-spacing: -.02em; max-width: 720px; margin-bottom: 28px; }
-  .sub em { color: var(--red); font-style: normal; }
+  /* device mock */
+  .hero-device {
+    position: relative; display: flex; justify-content: center;
+    perspective: 1200px;
+  }
+  .phone {
+    position: relative;
+    height: min(650px, calc(100svh - 200px));
+    width: auto; aspect-ratio: 9 / 19.5;
+    padding: 9px; border-radius: 38px;
+    background: linear-gradient(160deg, #2a2a2a, #0a0a0a 45%, #232323);
+    box-shadow:
+      0 40px 90px rgba(0, 0, 0, .8),
+      0 0 0 1px #2c2c2c,
+      0 0 70px rgba(255, 42, 42, .12);
+    transform: rotateY(-9deg) rotateX(3deg);
+    transition: transform .35s var(--ease);
+    will-change: transform;
+  }
+  .phone::before {
+    content: ""; position: absolute; left: 50%; top: 14px; transform: translateX(-50%);
+    width: 84px; height: 20px; border-radius: 20px; background: #000; z-index: 3;
+    box-shadow: inset 0 0 0 1px #222;
+  }
+  .phone-screen {
+    width: 100%; height: 100%; border-radius: 30px; overflow: hidden;
+    background: #000; position: relative;
+  }
+  .phone-screen video { width: 100%; height: 100%; object-fit: cover; }
+  .phone-badge {
+    position: absolute; left: -22px; bottom: 64px; z-index: 4;
+    background: #0d0d0d; border: 1px solid #2b2b2b; padding: 10px 14px;
+    font: 700 10px/1.5 var(--mono); letter-spacing: .1em; color: var(--muted);
+    text-transform: uppercase; animation: float 5s ease-in-out infinite;
+  }
+  .phone-badge b { color: var(--red); display: block; font-size: 11px; }
+  @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
 
-  /* gallery */
-  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
-  figure { background: var(--card); border: 1px solid var(--line); padding: 14px; }
-  figure img { width: 100%; height: 380px; object-fit: contain; background: #050505; }
-  figcaption { margin-top: 12px; color: var(--muted); font-size: 14px; }
-  figcaption b { display: block; color: var(--fg); font-size: 15px; margin-bottom: 2px; }
-  .video-wrap { margin-top: 20px; border: 1px solid var(--line); background: var(--card); padding: 10px; }
-  .video-wrap video { width: 100%; display: block; background: #000; }
-  .video-cap { color: var(--muted); font: 12px/1.6 "Space Mono", monospace; padding: 10px 4px 2px; }
+  /* marquee */
+  .marquee {
+    position: relative; z-index: 2; margin-top: 64px;
+    border-top: 1px solid var(--line); border-bottom: 1px solid var(--line);
+    overflow: hidden; padding: 15px 0;
+    background: rgba(0, 0, 0, .35);
+  }
+  .marquee-track {
+    display: flex; width: max-content; gap: 40px;
+    animation: marquee 26s linear infinite;
+  }
+  .marquee span {
+    font: 700 12px/1 var(--mono); letter-spacing: .2em;
+    color: #6f6f6f; text-transform: uppercase; white-space: nowrap;
+  }
+  .marquee span::after { content: "◆"; color: var(--red); margin-left: 40px; font-size: 8px; vertical-align: middle; }
+  @keyframes marquee { to { transform: translateX(-50%); } }
 
-  /* cards */
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
-  .card { background: var(--card); padding: 24px; }
-  .card h3 { font-size: 17px; margin-bottom: 8px; }
-  .card p { color: #b5b5b5; font-size: 15px; }
+  /* ---------- sections ---------- */
+  section { padding: 104px 0; border-bottom: 1px solid var(--line); position: relative; scroll-margin-top: 80px; }
+  .section-head { margin-bottom: 46px; max-width: 720px; }
+  .kicker {
+    display: block; font: 700 11px/1 var(--mono); letter-spacing: .22em;
+    color: var(--red); text-transform: uppercase; margin-bottom: 14px;
+  }
+  h2 {
+    font: 800 clamp(30px, 4vw, 48px)/1.05 var(--sans);
+    letter-spacing: -.035em; margin: 0 0 14px;
+  }
+  .section-head p { color: var(--muted); margin: 0; font-size: 16px; max-width: 620px; }
 
-  /* steps */
-  ol.steps { list-style: none; counter-reset: s; padding: 0; display: grid; gap: 18px; max-width: 820px; }
-  ol.steps li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 16px; }
-  ol.steps li::before { content: counter(s, decimal-leading-zero); font: 700 20px/1.4 "Space Mono", monospace; color: var(--red); }
-  ol.steps p { color: #b5b5b5; }
-  pre { background: var(--code); border: 1px solid var(--line); padding: 14px 16px; overflow-x: auto; margin-top: 10px; font: 13px/1.6 "Space Mono", monospace; color: #e8e8e8; }
+  /* reveal */
+  .reveal { opacity: 1; transform: none; transition: opacity .8s var(--ease), transform .8s var(--ease); transition-delay: var(--d, 0s); }
+  .js .reveal { opacity: 0; transform: translateY(30px); }
+  .js .reveal.in { opacity: 1; transform: none; }
 
-  /* stats + table */
-  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 28px; }
-  .stat { background: var(--card); padding: 22px; }
-  .stat b { display: block; font: 700 30px/1 "Space Mono", monospace; color: var(--red); letter-spacing: -.02em; }
-  .stat span { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; }
-  table { width: 100%; border-collapse: collapse; font-size: 15px; }
-  th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { color: var(--muted); font: 700 11px/1 "Space Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
-  td.num { font-family: "Space Mono", monospace; white-space: nowrap; }
+  /* bento */
+  .bento {
+    display: grid; grid-template-columns: repeat(12, 1fr); gap: 14px;
+  }
+  .card {
+    position: relative; background: var(--card); border: 1px solid var(--line);
+    padding: 28px; overflow: hidden;
+    transition: border-color .3s, transform .3s var(--ease);
+  }
+  .card::before {
+    content: ""; position: absolute; inset: 0; opacity: 0;
+    background: radial-gradient(420px circle at var(--mx, 50%) var(--my, 50%), rgba(255, 42, 42, .13), transparent 60%);
+    transition: opacity .35s; pointer-events: none;
+  }
+  .card:hover { border-color: #3a3a3a; transform: translateY(-3px); }
+  .card:hover::before { opacity: 1; }
+  .card h3 { font-size: 19px; margin: 0 0 8px; letter-spacing: -.01em; }
+  .card p { margin: 0; color: #a8a8a8; font-size: 14.5px; }
+  .card .num {
+    position: absolute; right: 22px; top: 18px;
+    font: 700 11px/1 var(--mono); color: #3a3a3a; letter-spacing: .1em;
+  }
+  .card.big { grid-column: span 7; }
+  .card.med { grid-column: span 5; }
+  .card.third { grid-column: span 4; }
+  .card.wide { grid-column: span 12; }
+  .card .glyph {
+    width: 40px; height: 40px; margin-bottom: 18px;
+    display: grid; place-items: center;
+    border: 1px solid #2c2c2c; color: var(--red);
+    font: 700 16px/1 var(--mono);
+  }
+
+  /* demo */
+  .demo-grid {
+    display: grid; grid-template-columns: 1.15fr .85fr .85fr;
+    gap: 18px; align-items: start;
+  }
+  .shot {
+    border: 1px solid var(--line); background: var(--card);
+    padding: 12px; transition: border-color .3s, transform .3s var(--ease);
+  }
+  .shot:hover { border-color: #3a3a3a; transform: translateY(-4px); }
+  .shot img { width: 100%; border-radius: 2px; }
+  .shot figcaption {
+    font: 400 11px/1.6 var(--mono); color: var(--muted);
+    padding: 12px 4px 2px; letter-spacing: .04em;
+  }
+  .shot figcaption b { color: var(--fg); display: block; font-weight: 700; }
+  .phone-shot {
+    border-radius: 26px; padding: 7px; background: #111; border: 1px solid #2a2a2a;
+    box-shadow: 0 24px 60px rgba(0, 0, 0, .6);
+  }
+  .phone-shot .inner { border-radius: 20px; overflow: hidden; background: #000; }
+  .phone-shot img { border-radius: 0; }
+  .caption { font: 400 11px/1.6 var(--mono); color: var(--muted); text-align: center; padding-top: 12px; }
+
+  .terminal {
+    margin-top: 20px; border: 1px solid var(--line); background: #070707;
+    font: 400 12.5px/1.9 var(--mono); overflow: hidden;
+  }
+  .terminal-bar {
+    display: flex; align-items: center; gap: 7px;
+    padding: 10px 14px; border-bottom: 1px solid var(--line); background: #0c0c0c;
+  }
+  .terminal-bar i { width: 9px; height: 9px; border-radius: 50%; background: #2c2c2c; }
+  .terminal-bar i:first-child { background: #ff5f57; }
+  .terminal-bar i:nth-child(2) { background: #febc2e; }
+  .terminal-bar i:nth-child(3) { background: #28c840; }
+  .terminal-bar span { margin-left: 8px; color: #555; font-size: 11px; }
+  .terminal pre { margin: 0; padding: 16px 18px; overflow-x: auto; color: #cfcfcf; }
+  .terminal .ok { color: #28c840; }
+  .terminal .tag { color: var(--red); }
+
+  /* stats */
+  .stats { display: grid; grid-template-columns: repeat(4, 1fr); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  .stat { background: var(--bg); padding: 34px 26px; }
+  .stat b {
+    display: block; font: 800 clamp(30px, 4vw, 46px)/1 var(--sans);
+    letter-spacing: -.04em; color: var(--fg);
+  }
+  .stat b em { font-style: normal; color: var(--red); }
+  .stat span { display: block; margin-top: 10px; font: 400 11px/1.5 var(--mono); color: var(--muted); letter-spacing: .08em; text-transform: uppercase; }
+
+  /* setup */
+  .steps { display: grid; gap: 0; border-top: 1px solid var(--line); }
+  .step {
+    display: grid; grid-template-columns: 72px 1fr; gap: 26px;
+    padding: 30px 0; border-bottom: 1px solid var(--line);
+    position: relative;
+  }
+  .step-num {
+    font: 700 13px/1 var(--mono); color: var(--red);
+    width: 46px; height: 46px; border: 1px solid #2c2c2c;
+    display: grid; place-items: center; border-radius: 50%;
+    transition: background .3s, color .3s, border-color .3s;
+  }
+  .step:hover .step-num { background: var(--red); color: #000; border-color: var(--red); }
+  .step h3 { margin: 0 0 6px; font-size: 20px; letter-spacing: -.01em; }
+  .step p { margin: 0; color: #a8a8a8; font-size: 14.5px; max-width: 640px; }
+  .step pre {
+    margin: 14px 0 0; padding: 14px 16px; background: #080808;
+    border: 1px solid var(--line); overflow-x: auto;
+    font: 400 12px/1.8 var(--mono); color: #d8d8d8;
+  }
+  .step pre .c { color: #5f5f5f; }
+
+  /* controls */
+  .keys { display: grid; grid-template-columns: repeat(3, 1fr); gap: 12px; }
+  .key {
+    display: flex; align-items: center; justify-content: space-between; gap: 14px;
+    border: 1px solid var(--line); background: var(--card);
+    padding: 16px 18px; font-size: 14px;
+    transition: border-color .2s, background .2s;
+  }
+  .key:hover { border-color: #3a3a3a; background: #0f0f0f; }
+  .key kbd {
+    font: 700 12px/1 var(--mono); color: var(--red);
+    border: 1px solid #2c2c2c; padding: 6px 9px; background: #080808;
+  }
+
+  /* table */
+  .table-wrap { overflow-x: auto; border: 1px solid var(--line); }
+  table { width: 100%; border-collapse: collapse; font-size: 14.5px; min-width: 560px; }
+  th, td { text-align: left; padding: 16px 18px; border-bottom: 1px solid var(--line); vertical-align: top; }
+  th {
+    color: var(--muted); font: 700 10px/1.4 var(--mono);
+    letter-spacing: .14em; text-transform: uppercase; background: #080808;
+  }
+  tr:last-child td { border-bottom: 0; }
+  td.num { font-family: var(--mono); white-space: nowrap; }
   td.num b { color: var(--red); }
-  .table-wrap { overflow-x: auto; }
 
-  .keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
-  .key { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); background: var(--card); font-size: 14px; }
-  .key kbd { font: 700 12px "Space Mono", monospace; color: var(--red); }
+  /* footer */
+  footer { padding: 64px 0 72px; color: var(--muted); font-size: 13.5px; }
+  .foot-grid { display: flex; flex-wrap: wrap; gap: 32px; justify-content: space-between; align-items: flex-start; }
+  .foot-brand { font: 700 16px/1 var(--mono); color: var(--fg); display: flex; align-items: center; gap: 10px; }
+  footer a { color: var(--muted); text-decoration: none; border-bottom: 1px solid #262626; }
+  footer a:hover { color: var(--fg); border-color: var(--red); }
+  .foot-links { display: flex; flex-wrap: wrap; gap: 10px 22px; font: 400 12px/1.8 var(--mono); }
 
-  .note { border-left: 3px solid var(--red); background: #120606; padding: 16px 18px; color: #e3e3e3; font-size: 15px; }
-  footer { padding: 44px 0 64px; color: var(--muted); font-size: 14px; }
-  footer a { color: var(--muted); }
+  @media (max-width: 900px) {
+    .hero-grid { grid-template-columns: 1fr; gap: 56px; }
+    .hero { padding-top: 110px; }
+    .hero-device { order: -1; }
+    .phone { height: min(520px, 56svh); width: auto; }
+    .nav-links a:not(.nav-cta) { display: none; }
+    .bento .card { grid-column: span 12 !important; }
+    .demo-grid { grid-template-columns: 1fr; }
+    .stats { grid-template-columns: repeat(2, 1fr); }
+    .keys { grid-template-columns: 1fr 1fr; }
+  }
+  @media (max-width: 560px) {
+    section { padding: 76px 0; }
+    .stats { grid-template-columns: 1fr; }
+    .keys { grid-template-columns: 1fr; }
+    .step { grid-template-columns: 46px 1fr; gap: 16px; }
+    .phone-badge { left: 0; bottom: 40px; }
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    html { scroll-behavior: auto; }
+    *, *::before, *::after { animation: none !important; transition: none !important; }
+    .reveal { opacity: 1; transform: none; }
+    h1 .line > span { transform: none; }
+  }
 </style>
 </head>
 <body>
 
-<nav class="nav">
-  <div class="wrap nav-in">
-    <a class="brand" href="#top">screen<span>less</span></a>
+<div class="progress" aria-hidden="true"><i id="bar"></i></div>
+
+<nav id="nav">
+  <div class="wrap nav-inner">
+    <a class="brand" href="#top"><span class="brand-dot"></span>screenless</a>
     <div class="nav-links">
-      <a href="#demo">Demo</a>
       <a href="#features">Features</a>
+      <a href="#demo">Demo</a>
       <a href="#setup">Setup</a>
       <a href="#results">Results</a>
-      <a class="nav-gh" href="https://github.com/Vighnesh2514/screenless-android">GitHub ↗</a>
+      <a class="nav-cta" href="https://github.com/Vighnesh2514/screenless-android">GitHub ↗</a>
     </div>
   </div>
 </nav>
 
 <header class="hero" id="top">
+  <canvas id="dots" aria-hidden="true"></canvas>
   <div class="wrap hero-grid">
-    <div>
-      <div class="tag">Android · Windows · macOS · No root</div>
-      <h1>screen<span>less</span></h1>
-      <p class="lede">Use an Android phone with a broken screen from any laptop. See it in a window, control it with your mouse and keyboard, over USB or Wi-Fi.</p>
-      <div class="cta">
-        <a class="btn primary" href="#setup">Set up on Windows →</a>
-        <a class="btn" href="https://github.com/Vighnesh2514/screenless-android">GitHub</a>
-        <a class="btn" href="https://github.com/Vighnesh2514/screenless-android/archive/refs/heads/main.zip">Download ZIP</a>
+    <div class="hero-copy">
+      <p class="eyebrow reveal" style="--d:.02s">Android · Windows · macOS · No root</p>
+      <h1 class="reveal" style="--d:.1s">
+        <span class="line">A broken screen</span>
+        <span class="line">isn't a <span class="accent">dead phone</span>.</span>
+      </h1>
+      <p class="lede reveal" style="--d:.18s">
+        screenless puts your Android phone in a window on your laptop.
+        Mouse, keyboard and clipboard work both ways — over USB or Wi-Fi.
+        Nothing installed on the phone. No root.
+      </p>
+      <div class="cta reveal" style="--d:.26s">
+        <a class="btn primary" href="#setup">Set up on Windows</a>
+        <a class="btn ghost" href="https://github.com/Vighnesh2514/screenless-android">View source</a>
+        <a class="btn ghost" href="https://github.com/Vighnesh2514/screenless-android/archive/refs/heads/main.zip">Download ZIP</a>
       </div>
-      <p class="hero-meta"><b>Verified on Windows 11</b> · scrcpy 5.0.1 · USB and Wi-Fi · moto g30 (Android 12)</p>
+      <ul class="hero-meta reveal" style="--d:.34s">
+        <li>Windows 11 tested</li>
+        <li>scrcpy 5.0.1</li>
+        <li>MIT licence</li>
+      </ul>
     </div>
-    <div class="mirror-frame">
-      <img src="media/mirror-windows.png" alt="The moto g30 mirrored in a window on Windows 11, with the phone's screen turned off">
+
+    <div class="hero-device" id="device">
+      <div class="phone" id="phone">
+        <div class="phone-screen">
+          <video src="media/demo.mp4" poster="media/site.png" autoplay muted loop playsinline></video>
+        </div>
+        <div class="phone-badge"><b>live mirror</b>USB · 60 fps</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="marquee" aria-hidden="true">
+    <div class="marquee-track">
+      <span>USB or Wi-Fi</span><span>No root</span><span>No app on the phone</span><span>Windows 10/11</span><span>macOS</span><span>adb + scrcpy</span><span>One double-click</span>
+      <span>USB or Wi-Fi</span><span>No root</span><span>No app on the phone</span><span>Windows 10/11</span><span>macOS</span><span>adb + scrcpy</span><span>One double-click</span>
     </div>
   </div>
 </header>
 
-<section id="demo">
-  <div class="wrap">
-    <h2>See it running</h2>
-    <p class="sub">Captured on the real phone, driven entirely from a <em>Windows 11 laptop</em> over USB.</p>
+<main>
+  <section id="features">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="kicker">01 — What you get</span>
+        <h2>Everything around the hard part.</h2>
+        <p>scrcpy does the mirroring. screenless is the packaging: one launcher, sane defaults, a reversible tune-up and a runbook an AI can follow.</p>
+      </div>
 
-    <div class="gallery">
-      <figure>
-        <img src="media/dev-options.png" alt="Android Developer options with USB debugging turned on">
-        <figcaption><b>Phone setup, once</b>USB debugging and “Disable ADB authorisation timeout” on. Nothing gets installed on the phone.</figcaption>
-      </figure>
-      <figure>
-        <img src="media/site-mobile.png" alt="This page open on the moto g30">
-        <figcaption><b>This page, on the phone</b>Opened through the mirror while the phone’s own display stayed off.</figcaption>
-      </figure>
+      <div class="bento">
+        <article class="card big reveal" style="--d:.05s">
+          <span class="num">01</span>
+          <div class="glyph">▶</div>
+          <h3>One double-click</h3>
+          <p>The launcher uses USB if the cable is in, otherwise Wi-Fi to the last known IP. Quality is picked per transport, so weak Wi-Fi drops fewer frames.</p>
+        </article>
+        <article class="card med reveal" style="--d:.1s">
+          <span class="num">02</span>
+          <div class="glyph">∅</div>
+          <h3>Nothing on the phone</h3>
+          <p>scrcpy pushes a tiny server over adb each time and removes it when you quit. No APK, no root, no account.</p>
+        </article>
+        <article class="card third reveal" style="--d:.15s">
+          <span class="num">03</span>
+          <div class="glyph">⌁</div>
+          <h3>Wireless that survives</h3>
+          <p>Plug in once and it re-arms wireless mode. After a phone restart, plug in, run Phone, unplug.</p>
+        </article>
+        <article class="card third reveal" style="--d:.2s">
+          <span class="num">04</span>
+          <div class="glyph">⚡</div>
+          <h3>Reversible tuning</h3>
+          <p>Animations 0.5×, stay-awake and an optional debloat list. Every change has an undo.</p>
+        </article>
+        <article class="card third reveal" style="--d:.25s">
+          <span class="num">05</span>
+          <div class="glyph">AI</div>
+          <h3>A runbook for agents</h3>
+          <p>AGENTS.md tells OpenCode, Claude Code or Codex how to set up a stranger's laptop, step by step.</p>
+        </article>
+        <article class="card wide reveal" style="--d:.3s">
+          <span class="num">06</span>
+          <div class="glyph">!</div>
+          <h3>An agent with a brake</h3>
+          <p>Experimental: Claude taps, swipes and types. Anything that pays, sends, orders or deletes waits for a y/N.</p>
+        </article>
+      </div>
     </div>
+  </section>
 
-    <div class="video-wrap">
-      <video controls playsinline preload="metadata" poster="media/site-mobile.png">
-        <source src="media/demo.mp4" type="video/mp4">
-        Your browser can’t play this video. <a href="media/demo.mp4">Download it instead.</a>
-      </video>
-      <p class="video-cap">Recorded with scrcpy --record while scrolling the phone from the laptop. No touchscreen, no cable after the first run.</p>
+  <section id="demo">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="kicker">02 — See it running</span>
+        <h2>Recorded on Windows 11.</h2>
+        <p>A moto g30 on the end of a USB cable, driven entirely from the laptop. The phone's own display stays off on purpose.</p>
+      </div>
+
+      <div class="demo-grid">
+        <figure class="shot reveal" style="--d:.05s; margin:0">
+          <img src="media/mirror-windows.png" alt="The scrcpy window on Windows 11 showing the moto g30 screen" loading="lazy">
+          <figcaption><b>The mirror on Windows</b>scrcpy 5.0.1 · D3D11 hardware decoding</figcaption>
+        </figure>
+        <figure class="phone-shot reveal" style="--d:.12s; margin:0">
+          <div class="inner"><img src="media/dev-options.png" alt="Android Developer options with USB debugging enabled" loading="lazy"></div>
+          <figcaption class="caption">USB debugging + ADB timeout on</figcaption>
+        </figure>
+        <figure class="phone-shot reveal" style="--d:.19s; margin:0">
+          <div class="inner"><img src="media/site.png" alt="This website open in Chrome on the phone" loading="lazy"></div>
+          <figcaption class="caption">This site, on the phone</figcaption>
+        </figure>
+      </div>
+
+      <div class="terminal reveal" style="--d:.1s">
+        <div class="terminal-bar"><i></i><i></i><i></i><span>windows\doctor.ps1</span></div>
+        <pre><span class="tag">[screenless]</span> Windows: Microsoft Windows 11 Pro
+<span class="tag">[screenless]</span> scrcpy: scrcpy 5.0.1
+<span class="tag">[screenless]</span> adb: Android Debug Bridge 1.0.41
+<span class="tag">[screenless]</span> Phone: ZF652793NW device (moto_g_30_) over USB
+<span class="tag">[screenless]</span> <span class="ok">Ready.</span> Double-click "Phone" on the Desktop.</pre>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="features">
-  <div class="wrap">
-    <h2>What you get</h2>
-    <p class="sub">A developer tool turned into something you just double-click.</p>
-    <div class="grid">
-      <div class="card"><h3>One click</h3><p>Double-click <b>Phone</b>. USB if the cable’s in, Wi-Fi if not. Quality is tuned for each, and the phone’s IP is remembered.</p></div>
-      <div class="card"><h3>No phone screen needed</h3><p>Mouse, keyboard, clipboard and pattern unlock from the laptop. The phone’s damaged display stays off.</p></div>
-      <div class="card"><h3>Wireless</h3><p>Run once over USB and it switches the phone into wireless mode. After that, no cable.</p></div>
-      <div class="card"><h3>Any laptop</h3><p>Copy the phone’s trusted key to a friend’s laptop and it connects with no “Allow?” prompt.</p></div>
-      <div class="card"><h3>Faster phone</h3><p>Reversible tuning: quicker animations, stay-awake, bloatware off. <b>+671 MB</b> free RAM on the Windows run.</p></div>
-      <div class="card"><h3>AI setup</h3><p>Open OpenCode or Claude Code in the folder and say “connect my phone”. It follows <span class="mono">AGENTS.md</span>.</p></div>
+  <section id="stats">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="kicker">03 — Measured, not guessed</span>
+        <h2>Numbers from the real device.</h2>
+        <p>Everything below came from the moto g30 over adb, not from a spec sheet.</p>
+      </div>
+      <div class="stats reveal">
+        <div class="stat"><b><span data-count="1.5" data-decimals="1">0</span><em> GB</em></b><span>free RAM after tuning</span></div>
+        <div class="stat"><b><span data-count="60">0</span><em> fps</em></b><span>mirror ceiling (60 Hz panel)</span></div>
+        <div class="stat"><b><span data-count="0">0</span></b><span>apps installed on the phone</span></div>
+        <div class="stat"><b><span data-count="0">0</span></b><span>root required</span></div>
+      </div>
     </div>
-  </div>
-</section>
+  </section>
 
-<section id="setup">
-  <div class="wrap">
-    <h2>Set up on Windows</h2>
-    <p class="sub">Four steps, about ten minutes the first time.</p>
-    <ol class="steps">
-      <li><div><b>Turn on USB debugging</b><p>Settings → About phone → tap Build number 7×. Then Developer options → USB debugging ON.</p></div></li>
-      <li><div><b>Get the project and install</b><p>Downloads scrcpy into your user folder and puts a “Phone” shortcut on your Desktop. No admin rights, no Microsoft Store.</p>
-<pre>git clone https://github.com/Vighnesh2514/screenless-android C:\screenless
+  <section id="setup">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="kicker">04 — Setup</span>
+        <h2>Windows in four steps.</h2>
+        <p>No admin rights and no Microsoft Store. The installer downloads scrcpy into your user folder and adds it to PATH.</p>
+      </div>
+
+      <div class="steps">
+        <div class="step reveal" style="--d:.05s">
+          <div class="step-num">01</div>
+          <div>
+            <h3>Turn on USB debugging</h3>
+            <p>Settings → About phone → tap Build number seven times. Then Developer options → USB debugging ON and Disable ADB authorisation timeout ON.</p>
+          </div>
+        </div>
+        <div class="step reveal" style="--d:.1s">
+          <div class="step-num">02</div>
+          <div>
+            <h3>Clone and install</h3>
+            <p>One script installs scrcpy, checks adb and puts a Phone shortcut on the Desktop.</p>
+            <pre>git clone https://github.com/Vighnesh2514/screenless-android C:\screenless
 cd C:\screenless\windows
 powershell -ExecutionPolicy Bypass -File .\install.ps1
-powershell -ExecutionPolicy Bypass -File .\doctor.ps1</pre></div></li>
-      <li><div><b>Plug in and double-click Phone</b><p>First time only: tap <i>Always allow</i> on the phone. The mirror opens.</p></div></li>
-      <li><div><b>Go wireless</b><p>Unplug, double-click Phone again. Same Wi-Fi network needed.</p></div></li>
-    </ol>
-  </div>
-</section>
-
-<section id="controls">
-  <div class="wrap">
-    <h2>Controls</h2>
-    <div class="keys">
-      <div class="key">Tap <kbd>Left-click</kbd></div>
-      <div class="key">Back <kbd>Right-click</kbd></div>
-      <div class="key">Home <kbd>Middle-click</kbd></div>
-      <div class="key">Wake / lock <kbd>Alt + P</kbd></div>
-      <div class="key">Phone screen off <kbd>Alt + O</kbd></div>
-      <div class="key">Recent apps <kbd>Alt + S</kbd></div>
+<span class="c"># optional: check tools, phone and saved IP</span>
+powershell -ExecutionPolicy Bypass -File .\doctor.ps1</pre>
+          </div>
+        </div>
+        <div class="step reveal" style="--d:.15s">
+          <div class="step-num">03</div>
+          <div>
+            <h3>Plug in and double-click Phone</h3>
+            <p>First time only: tap Always allow on the phone. The mirror opens and the phone's display turns off.</p>
+          </div>
+        </div>
+        <div class="step reveal" style="--d:.2s">
+          <div class="step-num">04</div>
+          <div>
+            <h3>Go wireless</h3>
+            <p>Unplug and double-click Phone again. Phone and laptop must be on the same network — 5 GHz is the difference between live and stutter.</p>
+          </div>
+        </div>
+      </div>
     </div>
-    <p style="color:var(--muted);font-size:14px;margin-top:14px">On a Mac, use Cmd instead of Alt.</p>
-  </div>
-</section>
+  </section>
 
-<section id="results">
-  <div class="wrap">
-    <h2>Measured on a moto g30</h2>
-    <p class="sub">The lag was RAM and 2.4 GHz Wi-Fi — <em>not</em> the mirroring software.</p>
-
-    <div class="stats">
-      <div class="stat"><b>1,558 MB</b><span>free RAM after tuning, up from 887 MB</span></div>
-      <div class="stat"><b>60 fps</b><span>ceiling set by the 60 Hz panel</span></div>
-      <div class="stat"><b>0 apps</b><span>installed on the phone</span></div>
-      <div class="stat"><b>5.0.1</b><span>scrcpy, H.264 hardware decode</span></div>
+  <section id="controls">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="kicker">05 — Controls</span>
+        <h2>The phone, under your hands.</h2>
+        <p>On a Mac, use Cmd instead of Alt.</p>
+      </div>
+      <div class="keys">
+        <div class="key reveal" style="--d:.02s">Tap <kbd>Left-click</kbd></div>
+        <div class="key reveal" style="--d:.05s">Back <kbd>Right-click</kbd></div>
+        <div class="key reveal" style="--d:.08s">Home <kbd>Middle-click</kbd></div>
+        <div class="key reveal" style="--d:.11s">Wake / lock <kbd>Alt + P</kbd></div>
+        <div class="key reveal" style="--d:.14s">Phone screen off <kbd>Alt + O</kbd></div>
+        <div class="key reveal" style="--d:.17s">Recent apps <kbd>Alt + S</kbd></div>
+      </div>
     </div>
+  </section>
 
-    <div class="table-wrap">
-    <table>
-      <tr><th></th><th>Before</th><th>After</th><th>What changed</th></tr>
-      <tr><td>Free RAM</td><td class="num">650 MB</td><td class="num"><b>860 MB</b></td><td>12 background bloat apps disabled</td></tr>
-      <tr><td>Animations</td><td class="num">1.0×</td><td class="num"><b>0.5×</b></td><td>Screens open about twice as fast</td></tr>
-      <tr><td>Mirror black on Wi-Fi</td><td class="num">Yes</td><td class="num"><b>No</b></td><td>Stay-awake that works without charging</td></tr>
-      <tr><td>Wi-Fi ping, 2.4 GHz hotspot</td><td class="num">166 ms avg</td><td class="num">—</td><td>Network-bound: use 5 GHz or USB</td></tr>
-    </table>
+  <section id="results">
+    <div class="wrap">
+      <div class="section-head reveal">
+        <span class="kicker">06 — Results</span>
+        <h2>What actually fixed the lag.</h2>
+        <p>Not the mirroring software. On a 4 GB phone it was RAM pressure and a 2.4 GHz hotspot.</p>
+      </div>
+      <div class="table-wrap reveal">
+        <table>
+          <thead>
+            <tr><th>Measurement</th><th>Before</th><th>After</th><th>What changed</th></tr>
+          </thead>
+          <tbody>
+            <tr><td>Free RAM</td><td class="num">887 MB</td><td class="num"><b>1,558 MB</b></td><td>12 background bloat apps disabled</td></tr>
+            <tr><td>Animations</td><td class="num">1.0×</td><td class="num"><b>0.5×</b></td><td>Screens open about twice as fast</td></tr>
+            <tr><td>Mirror black on Wi-Fi</td><td class="num">Yes</td><td class="num"><b>No</b></td><td>Stay-awake that works without charging</td></tr>
+            <tr><td>Wi-Fi ping, 2.4 GHz</td><td class="num">166 ms avg</td><td class="num">—</td><td>Network-bound: use 5 GHz or USB</td></tr>
+          </tbody>
+        </table>
+      </div>
     </div>
-  </div>
-</section>
-
-<section>
-  <div class="wrap">
-    <div class="note"><b>Phone restarted and Wi-Fi stopped?</b> Android turns wireless mode off on every restart. Plug in, start Phone once, unplug. <a href="https://github.com/Vighnesh2514/screenless-android/blob/main/docs/WIRELESS.md">Why, and how to automate it →</a></div>
-  </div>
-</section>
+  </section>
+</main>
 
 <footer>
-  <div class="wrap">
-    Built by <a href="https://github.com/Vighnesh2514">Vighnesh2514</a> with Claude. Mirroring by <a href="https://github.com/Genymobile/scrcpy">scrcpy</a> (Apache-2.0). Project code MIT.
+  <div class="wrap foot-grid">
+    <div>
+      <div class="foot-brand"><span class="brand-dot"></span>screenless</div>
+      <p style="margin:14px 0 0;max-width:420px">Built by <a href="https://github.com/Vighnesh2514">Vighnesh2514</a>. Mirroring by <a href="https://github.com/Genymobile/scrcpy">scrcpy</a> (Apache-2.0), on top of adb. Project code under MIT.</p>
+    </div>
+    <div class="foot-links">
+      <a href="https://github.com/Vighnesh2514/screenless-android">GitHub</a>
+      <a href="https://github.com/Vighnesh2514/screenless-android/blob/main/docs/WINDOWS.md">Windows guide</a>
+      <a href="https://github.com/Vighnesh2514/screenless-android/blob/main/docs/MACOS.md">macOS guide</a>
+      <a href="https://github.com/Vighnesh2514/screenless-android/blob/main/docs/TROUBLESHOOTING.md">Troubleshooting</a>
+    </div>
   </div>
 </footer>
 
+<script>
+(function () {
+  "use strict";
+  const reduce = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  /* scroll progress + nav state */
+  const bar = document.getElementById("bar");
+  const nav = document.getElementById("nav");
+  let ticking = false;
+  function onScroll() {
+    const max = document.documentElement.scrollHeight - window.innerHeight;
+    const y = window.scrollY || 0;
+    bar.style.transform = "scaleX(" + (max > 0 ? Math.min(1, y / max) : 0) + ")";
+    nav.classList.toggle("scrolled", y > 40);
+    ticking = false;
+  }
+  window.addEventListener("scroll", function () {
+    if (!ticking) { ticking = true; requestAnimationFrame(onScroll); }
+  }, { passive: true });
+  onScroll();
+
+  /* reveal on scroll */
+  const reveals = document.querySelectorAll(".reveal");
+  if (reduce || !("IntersectionObserver" in window)) {
+    reveals.forEach(function (el) { el.classList.add("in"); });
+  } else {
+    const io = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) {
+          entry.target.classList.add("in");
+          io.unobserve(entry.target);
+        }
+      });
+    }, { threshold: 0.14, rootMargin: "0px 0px -40px 0px" });
+    reveals.forEach(function (el) { io.observe(el); });
+  }
+
+  /* count up */
+  const counters = document.querySelectorAll("[data-count]");
+  function runCounter(el) {
+    const target = parseFloat(el.getAttribute("data-count"));
+    const decimals = parseInt(el.getAttribute("data-decimals") || "0", 10);
+    if (reduce) { el.textContent = target.toFixed(decimals); return; }
+    const start = performance.now();
+    const dur = 1300;
+    function frame(now) {
+      const t = Math.min(1, (now - start) / dur);
+      const eased = 1 - Math.pow(1 - t, 3);
+      el.textContent = (target * eased).toFixed(decimals);
+      if (t < 1) requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  }
+  if ("IntersectionObserver" in window) {
+    const cio = new IntersectionObserver(function (entries) {
+      entries.forEach(function (entry) {
+        if (entry.isIntersecting) { runCounter(entry.target); cio.unobserve(entry.target); }
+      });
+    }, { threshold: 0.6 });
+    counters.forEach(function (el) { cio.observe(el); });
+  } else {
+    counters.forEach(runCounter);
+  }
+
+  /* card glow follows the pointer */
+  document.querySelectorAll(".card").forEach(function (card) {
+    card.addEventListener("pointermove", function (e) {
+      const r = card.getBoundingClientRect();
+      card.style.setProperty("--mx", (e.clientX - r.left) + "px");
+      card.style.setProperty("--my", (e.clientY - r.top) + "px");
+    });
+  });
+
+  /* hero phone parallax */
+  const phone = document.getElementById("phone");
+  const device = document.getElementById("device");
+  if (phone && device && !reduce && window.matchMedia("(pointer: fine)").matches) {
+    device.addEventListener("pointermove", function (e) {
+      const r = device.getBoundingClientRect();
+      const x = (e.clientX - r.left) / r.width - 0.5;
+      const y = (e.clientY - r.top) / r.height - 0.5;
+      phone.style.transform = "rotateY(" + (-9 + x * 12) + "deg) rotateX(" + (3 - y * 10) + "deg) translateZ(0)";
+    });
+    device.addEventListener("pointerleave", function () {
+      phone.style.transform = "rotateY(-9deg) rotateX(3deg)";
+    });
+  }
+
+  /* dot matrix background */
+  const canvas = document.getElementById("dots");
+  if (canvas && !reduce) {
+    const ctx = canvas.getContext("2d");
+    let w = 0, h = 0, dpr = 1, dots = [], raf = 0, visible = true;
+    const mouse = { x: -9999, y: -9999 };
+
+    function build() {
+      dpr = Math.min(2, window.devicePixelRatio || 1);
+      w = canvas.offsetWidth; h = canvas.offsetHeight;
+      canvas.width = Math.floor(w * dpr);
+      canvas.height = Math.floor(h * dpr);
+      ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
+      dots = [];
+      const gap = 26;
+      for (let y = gap; y < h; y += gap) {
+        for (let x = gap; x < w; x += gap) {
+          dots.push({ x: x, y: y, base: 0.10 + Math.random() * 0.08 });
+        }
+      }
+    }
+
+    function draw(now) {
+      ctx.clearRect(0, 0, w, h);
+      const t = now * 0.001;
+      for (let i = 0; i < dots.length; i++) {
+        const d = dots[i];
+        const dx = d.x - mouse.x, dy = d.y - mouse.y;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+        const near = Math.max(0, 1 - dist / 150);
+        const wave = 0.5 + 0.5 * Math.sin(t * 0.9 + d.x * 0.012 + d.y * 0.008);
+        const alpha = d.base + near * 0.65 + wave * 0.04;
+        const r = 1.3 + near * 1.6;
+        ctx.beginPath();
+        ctx.arc(d.x, d.y, r, 0, Math.PI * 2);
+        ctx.fillStyle = near > 0.25
+          ? "rgba(255,42,42," + Math.min(1, alpha) + ")"
+          : "rgba(245,245,245," + alpha + ")";
+        ctx.fill();
+      }
+      raf = requestAnimationFrame(draw);
+    }
+
+    function start() { if (!raf) raf = requestAnimationFrame(draw); }
+    function stop() { if (raf) { cancelAnimationFrame(raf); raf = 0; } }
+
+    canvas.addEventListener("pointermove", function (e) {
+      const r = canvas.getBoundingClientRect();
+      mouse.x = e.clientX - r.left;
+      mouse.y = e.clientY - r.top;
+    });
+    canvas.addEventListener("pointerleave", function () { mouse.x = -9999; mouse.y = -9999; });
+    window.addEventListener("resize", function () { build(); });
+    document.addEventListener("visibilitychange", function () { document.hidden ? stop() : start(); });
+    if ("IntersectionObserver" in window) {
+      new IntersectionObserver(function (entries) {
+        visible = entries[0].isIntersecting;
+        visible ? start() : stop();
+      }, { threshold: 0 }).observe(canvas);
+    }
+    build();
+    start();
+  }
+})();
+</script>
 </body>
 </html>
