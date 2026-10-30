@@ -388,10 +388,10 @@
   .foot-links { display: flex; flex-wrap: wrap; gap: 10px 22px; font: 400 12px/1.8 var(--mono); }
 
   @media (max-width: 900px) {
-    .hero-grid { grid-template-columns: 1fr; gap: 56px; }
+    .hero-grid { grid-template-columns: 1fr; gap: 40px; }
     .hero { padding-top: 110px; }
-    .hero-device { order: -1; }
-    .phone { height: min(520px, 56svh); width: auto; }
+    .hero-device { order: 2; }
+    .phone { height: min(400px, 44svh); width: auto; }
     .nav-links a:not(.nav-cta) { display: none; }
     .bento .card { grid-column: span 12 !important; }
     .demo-grid { grid-template-columns: 1fr; }
@@ -403,7 +403,7 @@
     .stats { grid-template-columns: 1fr; }
     .keys { grid-template-columns: 1fr; }
     .step { grid-template-columns: 46px 1fr; gap: 16px; }
-    .phone-badge { left: 0; bottom: 40px; }
+    .phone-badge { display: none; }
   }
 
   @media (prefers-reduced-motion: reduce) {
