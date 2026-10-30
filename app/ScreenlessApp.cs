@@ -31,11 +31,45 @@ namespace Screenless
             {
                 if (a == "--tray") hidden = true;
             }
-            Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
-            try { ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072; }
-            catch { }
-            Application.Run(new MainForm(hidden));
+
+            bool created;
+            using (Mutex mutex = new Mutex(true, "Local\\screenless-app-single", out created))
+            {
+                if (!created)
+                {
+                    try
+                    {
+                        using (EventWaitHandle open = EventWaitHandle.OpenExisting("screenless-show"))
+                        {
+                            open.Set();
+                        }
+                    }
+                    catch { }
+                    return;
+                }
+
+                Application.EnableVisualStyles();
+                Application.SetCompatibleTextRenderingDefault(false);
+                try { ServicePointManager.SecurityProtocol = (SecurityProtocolType)3072; }
+                catch { }
+
+                using (EventWaitHandle show = new EventWaitHandle(false, EventResetMode.AutoReset, "screenless-show"))
+                {
+                    MainForm form = new MainForm(hidden);
+                    Thread watcher = new Thread(delegate()
+                    {
+                        while (true)
+                        {
+                            show.WaitOne();
+                            try { form.BeginInvoke(new MethodInvoker(form.ShowFromTray)); }
+                            catch { }
+                        }
+                    });
+                    watcher.IsBackground = true;
+                    watcher.Start();
+                    Application.Run(new ApplicationContext(form));
+                }
+            }
         }
     }
 
@@ -129,7 +163,6 @@ namespace Screenless
                 if (startHidden)
                 {
                     Hide();
-                    ShowInTaskbar = false;
                 }
             };
         }
@@ -491,10 +524,14 @@ namespace Screenless
             });
         }
 
+        public void ShowFromTray()
+        {
+            ShowApp();
+        }
+
         void ShowApp()
         {
             Show();
-            ShowInTaskbar = true;
             WindowState = FormWindowState.Normal;
             Activate();
             BringToFront();
@@ -552,13 +589,16 @@ namespace Screenless
             {
                 e.Cancel = true;
                 Hide();
-                ShowInTaskbar = false;
-                if (!balloonShown && tray != null)
+                try
                 {
-                    tray.ShowBalloonTip(2500, "screenless is still running",
-                        "Right-click the tray icon to open it or exit.", ToolTipIcon.Info);
-                    balloonShown = true;
+                    if (!balloonShown && tray != null)
+                    {
+                        tray.ShowBalloonTip(2500, "screenless is still running",
+                            "Right-click the tray icon to open it or exit.", ToolTipIcon.Info);
+                        balloonShown = true;
+                    }
                 }
+                catch { }
                 return;
             }
             base.OnFormClosing(e);
