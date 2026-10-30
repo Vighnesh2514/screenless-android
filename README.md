@@ -110,6 +110,8 @@ flowchart LR
 
 **Download [screenless.exe](https://github.com/Vighnesh2514/screenless-android/releases/latest/download/screenless.exe)** and double-click it. No PowerShell, no OpenCode, no setup.
 
+If your browser blocks the `.exe`: use the [ZIP](https://github.com/Vighnesh2514/screenless-android/releases/latest/download/screenless-1.0-windows.zip) or the [mirror on the site](https://screenless-android.vercel.app/download/screenless.exe).
+
 - Plug in USB → press **Turn on Wi-Fi mode** → unplug → **Start mirror**
 - Or type the phone's IP → **Connect** → **Start mirror**
 - Lives in the tray, can start with Windows, and installs scrcpy on first run if it's missing
