@@ -3,109 +3,209 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
-<title>screenless</title>
-<meta name="description" content="Use an Android phone with a broken screen from any Windows or Mac laptop. One-click scrcpy launcher, wireless mode, speed tuning. No root.">
+<title>screenless — use an Android phone with a broken screen from any laptop</title>
+<meta name="description" content="Mirror and control an Android phone from a Windows or Mac laptop over USB or Wi-Fi. No root, no app on the phone. Tested on Windows 11 with a moto g30.">
+<link rel="canonical" href="https://screenless-android.vercel.app/">
+
+<meta property="og:type" content="website">
+<meta property="og:url" content="https://screenless-android.vercel.app/">
+<meta property="og:title" content="screenless — Android mirroring from any laptop">
+<meta property="og:description" content="Broken phone screen? Use the phone from your laptop: mirror, mouse, keyboard, USB or Wi-Fi. No root. Tested on Windows 11 and macOS.">
+<meta property="og:image" content="https://screenless-android.vercel.app/media/og.png">
+<meta property="og:image:width" content="1200">
+<meta property="og:image:height" content="630">
+<meta name="twitter:card" content="summary_large_image">
+<meta name="twitter:title" content="screenless — Android mirroring from any laptop">
+<meta name="twitter:description" content="Broken phone screen? Use the phone from your laptop. No root, no app on the phone.">
+<meta name="twitter:image" content="https://screenless-android.vercel.app/media/og.png">
+
 <link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Inter:wght@400;500;700;800&display=swap" rel="stylesheet">
 <style>
   :root {
-    --bg: #000; --fg: #f5f5f5; --muted: #8a8a8a; --line: #222; --card: #0b0b0b; --red: #ff2a2a; --code: #111;
+    --bg: #000; --fg: #f5f5f5; --muted: #8a8a8a; --line: #222; --card: #0b0b0b;
+    --red: #ff2a2a; --code: #111;
   }
   * { box-sizing: border-box; margin: 0; }
-  body { background: var(--bg); color: var(--fg); font: 16px/1.6 Inter, system-ui, sans-serif; }
+  html { scroll-behavior: smooth; }
+  body { background: var(--bg); color: var(--fg); font: 16px/1.6 Inter, system-ui, sans-serif; -webkit-font-smoothing: antialiased; }
   a { color: var(--fg); }
-  .wrap { max-width: 920px; margin: 0 auto; padding: 0 16px; }
+  img { max-width: 100%; display: block; }
+  .wrap { max-width: 1040px; margin: 0 auto; padding: 0 20px; }
   .mono { font-family: "Space Mono", ui-monospace, monospace; }
 
-  header { padding: 72px 0 48px; border-bottom: 1px solid var(--line); }
+  /* nav */
+  .nav { position: sticky; top: 0; z-index: 20; background: rgba(0,0,0,.82); backdrop-filter: blur(10px); border-bottom: 1px solid var(--line); }
+  .nav-in { display: flex; align-items: center; justify-content: space-between; height: 60px; }
+  .brand { font: 700 18px/1 "Space Mono", monospace; text-decoration: none; letter-spacing: -.02em; }
+  .brand span { color: var(--red); }
+  .nav-links { display: flex; align-items: center; gap: 22px; font: 400 13px/1 "Space Mono", monospace; }
+  .nav-links a { color: var(--muted); text-decoration: none; }
+  .nav-links a:hover { color: var(--fg); }
+  .nav-gh { border: 1px solid var(--line); padding: 9px 12px; color: var(--fg) !important; }
+  @media (max-width: 720px) { .nav-links a:not(.nav-gh) { display: none; } }
+
+  /* hero */
+  .hero { padding: 72px 0 56px; border-bottom: 1px solid var(--line); }
+  .hero-grid { display: grid; grid-template-columns: 1.05fr .95fr; gap: 48px; align-items: center; }
+  @media (max-width: 860px) { .hero-grid { grid-template-columns: 1fr; gap: 36px; } }
   .tag { color: var(--red); font: 700 12px/1 "Space Mono", monospace; letter-spacing: .2em; text-transform: uppercase; }
-  h1 { font: 800 clamp(44px, 9vw, 88px)/1 Inter, sans-serif; letter-spacing: -.04em; margin: 18px 0 20px; }
+  h1 { font: 800 clamp(52px, 8vw, 92px)/0.95 Inter, sans-serif; letter-spacing: -.045em; margin: 18px 0 22px; }
   h1 span { color: var(--red); }
-  .lede { font-size: clamp(18px, 2.4vw, 22px); color: #cfcfcf; max-width: 640px; }
-  .cta { display: flex; flex-wrap: wrap; gap: 12px; margin-top: 32px; }
-  .btn { display: inline-block; padding: 12px 20px; border: 1px solid var(--fg); text-decoration: none; font: 700 14px/1 "Space Mono", monospace; }
+  .lede { font-size: clamp(17px, 2vw, 20px); color: #cfcfcf; max-width: 560px; }
+  .cta { display: flex; flex-wrap: wrap; gap: 10px; margin-top: 28px; }
+  .btn { display: inline-block; padding: 12px 18px; border: 1px solid var(--fg); text-decoration: none; font: 700 13px/1 "Space Mono", monospace; }
   .btn.primary { background: var(--red); border-color: var(--red); color: #000; }
   .btn:hover { opacity: .85; }
+  .hero-meta { margin-top: 22px; color: var(--muted); font: 12px/1.5 "Space Mono", monospace; }
+  .hero-meta b { color: #cfcfcf; font-weight: 400; }
+  .mirror-frame { border: 1px solid var(--line); background: var(--card); padding: 10px; box-shadow: 0 30px 90px rgba(0,0,0,.75); }
+  .mirror-frame img { width: 100%; height: auto; }
 
-  .dots { display: grid; grid-template-columns: repeat(24, 1fr); gap: 6px; margin: 40px 0 0; max-width: 420px; }
-  .dots i { aspect-ratio: 1; border-radius: 50%; background: #1c1c1c; }
-  .dots i.on { background: var(--fg); }
-  .dots i.red { background: var(--red); }
+  /* sections */
+  section { padding: 64px 0; border-bottom: 1px solid var(--line); }
+  h2 { font: 700 12px/1 "Space Mono", monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: 10px; }
+  .sub { font-size: clamp(20px, 2.6vw, 28px); font-weight: 700; letter-spacing: -.02em; max-width: 720px; margin-bottom: 28px; }
+  .sub em { color: var(--red); font-style: normal; }
 
-  section { padding: 56px 0; border-bottom: 1px solid var(--line); }
-  h2 { font: 700 13px/1 "Space Mono", monospace; letter-spacing: .18em; text-transform: uppercase; color: var(--muted); margin-bottom: 28px; }
-  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
+  /* gallery */
+  .gallery { display: grid; grid-template-columns: repeat(auto-fit, minmax(260px, 1fr)); gap: 16px; }
+  figure { background: var(--card); border: 1px solid var(--line); padding: 14px; }
+  figure img { width: 100%; height: 380px; object-fit: contain; background: #050505; }
+  figcaption { margin-top: 12px; color: var(--muted); font-size: 14px; }
+  figcaption b { display: block; color: var(--fg); font-size: 15px; margin-bottom: 2px; }
+  .video-wrap { margin-top: 20px; border: 1px solid var(--line); background: var(--card); padding: 10px; }
+  .video-wrap video { width: 100%; display: block; background: #000; }
+  .video-cap { color: var(--muted); font: 12px/1.6 "Space Mono", monospace; padding: 10px 4px 2px; }
+
+  /* cards */
+  .grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); }
   .card { background: var(--card); padding: 24px; }
-  .card h3 { font-size: 18px; margin-bottom: 8px; }
+  .card h3 { font-size: 17px; margin-bottom: 8px; }
   .card p { color: #b5b5b5; font-size: 15px; }
 
-  ol.steps { list-style: none; counter-reset: s; padding: 0; display: grid; gap: 20px; }
+  /* steps */
+  ol.steps { list-style: none; counter-reset: s; padding: 0; display: grid; gap: 18px; max-width: 820px; }
   ol.steps li { counter-increment: s; display: grid; grid-template-columns: 44px 1fr; gap: 16px; }
   ol.steps li::before { content: counter(s, decimal-leading-zero); font: 700 20px/1.4 "Space Mono", monospace; color: var(--red); }
   ol.steps p { color: #b5b5b5; }
   pre { background: var(--code); border: 1px solid var(--line); padding: 14px 16px; overflow-x: auto; margin-top: 10px; font: 13px/1.6 "Space Mono", monospace; color: #e8e8e8; }
 
+  /* stats + table */
+  .stats { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 1px; background: var(--line); border: 1px solid var(--line); margin-bottom: 28px; }
+  .stat { background: var(--card); padding: 22px; }
+  .stat b { display: block; font: 700 30px/1 "Space Mono", monospace; color: var(--red); letter-spacing: -.02em; }
+  .stat span { display: block; margin-top: 8px; color: var(--muted); font-size: 13px; }
   table { width: 100%; border-collapse: collapse; font-size: 15px; }
   th, td { text-align: left; padding: 12px 10px; border-bottom: 1px solid var(--line); vertical-align: top; }
-  th { color: var(--muted); font: 700 12px/1 "Space Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
+  th { color: var(--muted); font: 700 11px/1 "Space Mono", monospace; letter-spacing: .1em; text-transform: uppercase; }
   td.num { font-family: "Space Mono", monospace; white-space: nowrap; }
   td.num b { color: var(--red); }
   .table-wrap { overflow-x: auto; }
 
   .keys { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 10px; }
   .key { display: flex; justify-content: space-between; gap: 12px; padding: 12px 14px; border: 1px solid var(--line); background: var(--card); font-size: 14px; }
-  .key kbd { font: 700 13px "Space Mono", monospace; color: var(--red); }
+  .key kbd { font: 700 12px "Space Mono", monospace; color: var(--red); }
 
   .note { border-left: 3px solid var(--red); background: #120606; padding: 16px 18px; color: #e3e3e3; font-size: 15px; }
-  footer { padding: 40px 0 64px; color: var(--muted); font-size: 14px; }
+  footer { padding: 44px 0 64px; color: var(--muted); font-size: 14px; }
   footer a { color: var(--muted); }
 </style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <div class="tag">Android · Windows · macOS · No root</div>
-    <h1>screen<span>less</span></h1>
-    <p class="lede">Use an Android phone with a broken screen from any laptop. See it in a window and control it with your mouse and keyboard, over USB or Wi-Fi.</p>
-    <div class="cta">
-      <a class="btn primary" href="https://github.com/Vighnesh2514/screenless-android/blob/main/docs/WINDOWS.md">Windows guide →</a>
-      <a class="btn" href="https://github.com/Vighnesh2514/screenless-android">GitHub</a>
-      <a class="btn" href="https://github.com/Vighnesh2514/screenless-android/archive/refs/heads/main.zip">Download ZIP</a>
+
+<nav class="nav">
+  <div class="wrap nav-in">
+    <a class="brand" href="#top">screen<span>less</span></a>
+    <div class="nav-links">
+      <a href="#demo">Demo</a>
+      <a href="#features">Features</a>
+      <a href="#setup">Setup</a>
+      <a href="#results">Results</a>
+      <a class="nav-gh" href="https://github.com/Vighnesh2514/screenless-android">GitHub ↗</a>
     </div>
-    <div class="dots" id="dots" aria-hidden="true"></div>
+  </div>
+</nav>
+
+<header class="hero" id="top">
+  <div class="wrap hero-grid">
+    <div>
+      <div class="tag">Android · Windows · macOS · No root</div>
+      <h1>screen<span>less</span></h1>
+      <p class="lede">Use an Android phone with a broken screen from any laptop. See it in a window, control it with your mouse and keyboard, over USB or Wi-Fi.</p>
+      <div class="cta">
+        <a class="btn primary" href="#setup">Set up on Windows →</a>
+        <a class="btn" href="https://github.com/Vighnesh2514/screenless-android">GitHub</a>
+        <a class="btn" href="https://github.com/Vighnesh2514/screenless-android/archive/refs/heads/main.zip">Download ZIP</a>
+      </div>
+      <p class="hero-meta"><b>Verified on Windows 11</b> · scrcpy 5.0.1 · USB and Wi-Fi · moto g30 (Android 12)</p>
+    </div>
+    <div class="mirror-frame">
+      <img src="media/mirror-windows.png" alt="The moto g30 mirrored in a window on Windows 11, with the phone's screen turned off">
+    </div>
   </div>
 </header>
 
-<section>
+<section id="demo">
+  <div class="wrap">
+    <h2>See it running</h2>
+    <p class="sub">Captured on the real phone, driven entirely from a <em>Windows 11 laptop</em> over USB.</p>
+
+    <div class="gallery">
+      <figure>
+        <img src="media/dev-options.png" alt="Android Developer options with USB debugging turned on">
+        <figcaption><b>Phone setup, once</b>USB debugging and “Disable ADB authorisation timeout” on. Nothing gets installed on the phone.</figcaption>
+      </figure>
+      <figure>
+        <img src="media/site-mobile.png" alt="This page open on the moto g30">
+        <figcaption><b>This page, on the phone</b>Opened through the mirror while the phone’s own display stayed off.</figcaption>
+      </figure>
+    </div>
+
+    <div class="video-wrap">
+      <video controls playsinline preload="metadata" poster="media/site-mobile.png">
+        <source src="media/demo.mp4" type="video/mp4">
+        Your browser can’t play this video. <a href="media/demo.mp4">Download it instead.</a>
+      </video>
+      <p class="video-cap">Recorded with scrcpy --record while scrolling the phone from the laptop. No touchscreen, no cable after the first run.</p>
+    </div>
+  </div>
+</section>
+
+<section id="features">
   <div class="wrap">
     <h2>What you get</h2>
+    <p class="sub">A developer tool turned into something you just double-click.</p>
     <div class="grid">
-      <div class="card"><h3>One click</h3><p>Double-click <b>Phone</b>. USB if the cable's in, Wi-Fi if not. Quality is tuned for each, and the phone's IP is remembered.</p></div>
-      <div class="card"><h3>No phone screen needed</h3><p>Mouse, keyboard, clipboard and pattern unlock from the laptop. The phone's damaged display stays off.</p></div>
+      <div class="card"><h3>One click</h3><p>Double-click <b>Phone</b>. USB if the cable’s in, Wi-Fi if not. Quality is tuned for each, and the phone’s IP is remembered.</p></div>
+      <div class="card"><h3>No phone screen needed</h3><p>Mouse, keyboard, clipboard and pattern unlock from the laptop. The phone’s damaged display stays off.</p></div>
       <div class="card"><h3>Wireless</h3><p>Run once over USB and it switches the phone into wireless mode. After that, no cable.</p></div>
-      <div class="card"><h3>Any laptop</h3><p>Copy the phone's trusted key to a friend's laptop and it connects with no "Allow?" prompt.</p></div>
-      <div class="card"><h3>Faster phone</h3><p>Reversible tuning: quicker animations, stay-awake, bloatware off. +210 MB free RAM on a moto g30.</p></div>
+      <div class="card"><h3>Any laptop</h3><p>Copy the phone’s trusted key to a friend’s laptop and it connects with no “Allow?” prompt.</p></div>
+      <div class="card"><h3>Faster phone</h3><p>Reversible tuning: quicker animations, stay-awake, bloatware off. <b>+671 MB</b> free RAM on the Windows run.</p></div>
       <div class="card"><h3>AI setup</h3><p>Open OpenCode or Claude Code in the folder and say “connect my phone”. It follows <span class="mono">AGENTS.md</span>.</p></div>
     </div>
   </div>
 </section>
 
-<section>
+<section id="setup">
   <div class="wrap">
     <h2>Set up on Windows</h2>
+    <p class="sub">Four steps, about ten minutes the first time.</p>
     <ol class="steps">
       <li><div><b>Turn on USB debugging</b><p>Settings → About phone → tap Build number 7×. Then Developer options → USB debugging ON.</p></div></li>
       <li><div><b>Get the project and install</b><p>Downloads scrcpy into your user folder and puts a “Phone” shortcut on your Desktop. No admin rights, no Microsoft Store.</p>
 <pre>git clone https://github.com/Vighnesh2514/screenless-android C:\screenless
 cd C:\screenless\windows
-powershell -ExecutionPolicy Bypass -File .\install.ps1</pre></div></li>
+powershell -ExecutionPolicy Bypass -File .\install.ps1
+powershell -ExecutionPolicy Bypass -File .\doctor.ps1</pre></div></li>
       <li><div><b>Plug in and double-click Phone</b><p>First time only: tap <i>Always allow</i> on the phone. The mirror opens.</p></div></li>
       <li><div><b>Go wireless</b><p>Unplug, double-click Phone again. Same Wi-Fi network needed.</p></div></li>
     </ol>
   </div>
 </section>
 
-<section>
+<section id="controls">
   <div class="wrap">
     <h2>Controls</h2>
     <div class="keys">
@@ -120,9 +220,18 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre></div></li>
   </div>
 </section>
 
-<section>
+<section id="results">
   <div class="wrap">
     <h2>Measured on a moto g30</h2>
+    <p class="sub">The lag was RAM and 2.4 GHz Wi-Fi — <em>not</em> the mirroring software.</p>
+
+    <div class="stats">
+      <div class="stat"><b>1,558 MB</b><span>free RAM after tuning, up from 887 MB</span></div>
+      <div class="stat"><b>60 fps</b><span>ceiling set by the 60 Hz panel</span></div>
+      <div class="stat"><b>0 apps</b><span>installed on the phone</span></div>
+      <div class="stat"><b>5.0.1</b><span>scrcpy, H.264 hardware decode</span></div>
+    </div>
+
     <div class="table-wrap">
     <table>
       <tr><th></th><th>Before</th><th>After</th><th>What changed</th></tr>
@@ -147,22 +256,5 @@ powershell -ExecutionPolicy Bypass -File .\install.ps1</pre></div></li>
   </div>
 </footer>
 
-<script>
-  // Dot strip: a slow red scan across a 24×3 dot matrix
-  const el = document.getElementById('dots');
-  const cols = 24, rows = 3, dots = [];
-  for (let i = 0; i < cols * rows; i++) { const d = document.createElement('i'); el.appendChild(d); dots.push(d); }
-  let x = 0;
-  const reduce = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  function frame() {
-    dots.forEach((d, i) => {
-      const c = i % cols, r = Math.floor(i / cols);
-      d.className = c === x ? 'red' : (Math.abs(c - x) < 3 && (r + c) % 2 === 0 ? 'on' : '');
-    });
-    x = (x + 1) % cols;
-  }
-  frame();
-  if (!reduce) setInterval(frame, 120);
-</script>
 </body>
 </html>

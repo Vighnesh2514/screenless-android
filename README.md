@@ -14,11 +14,14 @@ See it in a window, control it with your mouse and keyboard, over USB or Wi-Fi. 
 
 **[Windows guide →](docs/WINDOWS.md)** &nbsp;·&nbsp; [Website](https://screenless-android.vercel.app) &nbsp;·&nbsp; [macOS guide](docs/MACOS.md) &nbsp;·&nbsp; [Troubleshooting](docs/TROUBLESHOOTING.md)
 
+<img src="docs/media/mirror-windows.png" width="300" alt="The moto g30 mirrored in a window on Windows 11, phone screen off">
+
 </div>
 
 > Built by **[Vighnesh2514](https://github.com/Vighnesh2514)** with **Claude** (Anthropic's AI). My moto g30's display died but the phone still worked. I set the direction and made the calls; Claude did the diagnosis, measurements, scripts and docs.
 
 ## Contents
+- [Screenshots](#screenshots)
 - [Features](#features)
 - [Quick start (Windows)](#quick-start-windows)
 - [Results](#results)
@@ -27,6 +30,20 @@ See it in a window, control it with your mouse and keyboard, over USB or Wi-Fi. 
 - [Compatibility and limits](#compatibility-and-limits)
 - [Security](#security)
 - [Credits and licences](#credits-and-licences)
+
+## Screenshots
+
+All captured on the real moto g30, driven from a **Windows 11** laptop over USB.
+
+| Phone setup, once | This page, on the phone |
+|---|---|
+| <img src="docs/media/dev-options.png" width="280" alt="Android Developer options with USB debugging on"> | <img src="docs/media/site-mobile.png" width="280" alt="The screenless site open on the phone"> |
+
+USB debugging and *Disable ADB authorisation timeout* on. Nothing is installed on the phone.
+
+![screenless demo: scrolling the phone from the laptop](docs/media/demo.gif)
+
+**Demo:** [14s screen recording](docs/media/demo.mp4) made with scrcpy `--record`; the phone's own display was off.
 
 ## Features
 
@@ -70,6 +87,8 @@ Measured on a Motorola moto g30 (Snapdragon 662, 4 GB RAM, Android 12). Details:
 | Wi-Fi ping (2.4 GHz hotspot) | 166 ms avg, 690 ms peak | — | Network-bound; the fix is 5 GHz or USB, not a setting |
 
 The biggest finding: **on a 4 GB phone, the lag is RAM and Wi-Fi, not the mirroring.** scrcpy streams through the phone's hardware H.264 encoder, so other mirroring apps can't beat it. They either wrap scrcpy or add latency.
+
+On the Windows 11 run, `tune.ps1` took free RAM from **887 MB to 1,558 MB**, and scrcpy decoded with D3D11 hardware acceleration at 720×1600.
 
 ## How it works
 
