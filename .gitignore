@@ -15,3 +15,6 @@ __pycache__/
 Thumbs.db
 
 .vercel
+
+# built app
+app/dist/

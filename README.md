@@ -27,6 +27,7 @@ No root. No app on the phone.
 - [Demo](#demo)
 - [Screenshots](#screenshots)
 - [What you get](#what-you-get)
+- [Desktop app](#desktop-app-no-terminal)
 - [How it works](#how-it-works)
 - [Quick start (Windows)](#quick-start-windows)
 - [Results](#results)
@@ -104,6 +105,18 @@ flowchart LR
 - **Nothing is installed on the phone.** scrcpy pushes a small server over adb each time it starts and removes it when you stop.
 - **Trust is a key pair.** When you tap *Always allow*, the phone stores the laptop's adb public key. Copying `adbkey` + `adbkey.pub` to another laptop makes it trusted too.
 - **Wireless** is `adb tcpip 5555` while plugged in, then `adb connect <ip>:5555`. Android resets it on every reboot.
+
+## Desktop app (no terminal)
+
+**Download [screenless.exe](https://github.com/Vighnesh2514/screenless-android/releases/latest/download/screenless.exe)** and double-click it. No PowerShell, no OpenCode, no setup.
+
+- Plug in USB → press **Turn on Wi-Fi mode** → unplug → **Start mirror**
+- Or type the phone's IP → **Connect** → **Start mirror**
+- Lives in the tray, can start with Windows, and installs scrcpy on first run if it's missing
+
+<img src="app/screenshot.png" width="380" alt="The screenless Windows app mirroring a moto g30 over Wi-Fi">
+
+Built with the C# compiler that ships with Windows: one 62 KB `.exe`, no installer, no admin rights. Source: [app/](app/).
 
 ## Quick start (Windows)
 
