@@ -112,8 +112,9 @@ flowchart LR
 
 If your browser blocks the `.exe`: use the [ZIP](https://github.com/Vighnesh2514/screenless-android/releases/latest/download/screenless-1.0-windows.zip) or the [mirror on the site](https://screenless-android.vercel.app/download/screenless.exe).
 
-- Plug in USB → press **Turn on Wi-Fi mode** → unplug → **Start mirror**
-- Or type the phone's IP → **Connect** → **Start mirror**
+- Plug in USB → **it saves the phone, switches it to Wi-Fi and opens the mirror**
+- Or pick a saved phone → **Connect** → **Start mirror**
+- Remembers every phone by serial, so a new Wi-Fi IP updates the old entry
 - Lives in the tray, can start with Windows, and installs scrcpy on first run if it's missing
 
 <img src="app/screenshot.png" width="380" alt="The screenless Windows app mirroring a moto g30 over Wi-Fi">

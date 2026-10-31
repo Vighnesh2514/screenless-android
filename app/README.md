@@ -17,6 +17,21 @@ one button, and the phone opens in a window. Works over USB or Wi-Fi.
 - **Installs scrcpy automatically** on first run if it's missing (official build,
   no admin rights, no Microsoft Store).
 
+## Saved phones and auto-setup
+
+Every phone you plug in is saved automatically by its serial: name plus the last IP.
+Plug a saved phone in again and the app:
+
+1. reads its current Wi-Fi IP,
+2. updates the saved entry, so a new Wi-Fi IP replaces the old one instead of adding a duplicate,
+3. turns wireless mode on,
+4. connects over Wi-Fi and opens the mirror.
+
+Untick **Auto-setup and start when a USB phone is plugged in** if you only want to charge.
+
+To switch phones without a cable, pick one in **SAVED PHONES** and press **Connect**.
+**Forget** removes it from the list.
+
 ## Use it
 
 1. Double-click `screenless.exe`.

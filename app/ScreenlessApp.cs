@@ -16,8 +16,8 @@ using Microsoft.Win32;
 [assembly: AssemblyProduct("screenless")]
 [assembly: AssemblyDescription("Android mirroring without the terminal")]
 [assembly: AssemblyCompany("Vighnesh2514")]
-[assembly: AssemblyVersion("1.0.0.0")]
-[assembly: AssemblyFileVersion("1.0.0.0")]
+[assembly: AssemblyVersion("1.1.0.0")]
+[assembly: AssemblyFileVersion("1.1.0.0")]
 
 namespace Screenless
 {
@@ -87,6 +87,18 @@ namespace Screenless
         }
     }
 
+    class SavedPhone
+    {
+        public string Serial;
+        public string Label;
+        public string Ip;
+
+        public override string ToString()
+        {
+            return Label + "   ·   " + Ip;
+        }
+    }
+
     class MainForm : Form
     {
         static readonly Color Bg = Color.FromArgb(10, 10, 10);
@@ -101,6 +113,9 @@ namespace Screenless
         string adb;
         string scrcpy;
         List<Device> devices = new List<Device>();
+        List<SavedPhone> savedPhones = new List<SavedPhone>();
+        HashSet<string> autoSetupDone = new HashSet<string>();
+        bool autoStarting;
         Process mirror;
         bool refreshing;
         bool working;
@@ -117,6 +132,8 @@ namespace Screenless
         Label statusTitle;
         Label statusDetail;
         ComboBox deviceCombo;
+        ComboBox savedCombo;
+        Button forgetBtn;
         TextBox ipText;
         Button refreshBtn;
         Button connectBtn;
@@ -126,6 +143,7 @@ namespace Screenless
         ComboBox qualityCombo;
         CheckBox audioCheck;
         CheckBox startupCheck;
+        CheckBox autoCheck;
         TextBox logBox;
         Label toolsLabel;
         System.Windows.Forms.Timer timer;
@@ -134,7 +152,7 @@ namespace Screenless
         {
             startHidden = startHiddenForm;
             Text = "screenless";
-            ClientSize = new Size(560, 700);
+            ClientSize = new Size(560, 710);
             FormBorderStyle = FormBorderStyle.FixedSingle;
             MaximizeBox = false;
             StartPosition = FormStartPosition.CenterScreen;
@@ -147,6 +165,7 @@ namespace Screenless
             BuildUi();
             BuildTray();
             LoadSettings();
+            LoadSavedPhones();
             RefreshTools();
             RefreshDevices();
 
@@ -256,10 +275,10 @@ namespace Screenless
             card.Controls.Add(statusDetail);
             Controls.Add(card);
 
-            Controls.Add(MakeLabel("PHONE", 20, 176, 200, 16, 8f, Muted, true, true));
+            Controls.Add(MakeLabel("PHONE", 20, 174, 200, 16, 8f, Muted, true, true));
 
             deviceCombo = new ComboBox();
-            deviceCombo.Location = new Point(20, 196);
+            deviceCombo.Location = new Point(20, 194);
             deviceCombo.Size = new Size(400, 28);
             deviceCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             deviceCombo.FlatStyle = FlatStyle.Flat;
@@ -284,14 +303,14 @@ namespace Screenless
             };
             Controls.Add(deviceCombo);
 
-            refreshBtn = MakeButton("Refresh", 428, 196, 112, 28, false);
+            refreshBtn = MakeButton("Refresh", 428, 194, 112, 28, false);
             refreshBtn.Click += delegate { RefreshDevices(); };
             Controls.Add(refreshBtn);
 
-            Controls.Add(MakeLabel("WI-FI IP", 20, 240, 200, 16, 8f, Muted, true, true));
+            Controls.Add(MakeLabel("WI-FI IP", 20, 236, 200, 16, 8f, Muted, true, true));
 
             ipText = new TextBox();
-            ipText.Location = new Point(20, 260);
+            ipText.Location = new Point(20, 256);
             ipText.Size = new Size(336, 28);
             ipText.BackColor = Card;
             ipText.ForeColor = Fg;
@@ -299,29 +318,77 @@ namespace Screenless
             ipText.Font = new Font("Consolas", 10.5f);
             Controls.Add(ipText);
 
-            connectBtn = MakeButton("Connect", 364, 260, 84, 26, false);
+            connectBtn = MakeButton("Connect", 364, 256, 84, 26, false);
             connectBtn.Click += delegate { ConnectIp(); };
             Controls.Add(connectBtn);
 
-            Controls.Add(MakeLabel("On the phone: Settings → Wi-Fi → your network → IP address", 20, 292, 520, 18, 8f, Muted, false, false));
+            Controls.Add(MakeLabel("SAVED PHONES", 20, 294, 200, 16, 8f, Muted, true, true));
 
-            wifiBtn = MakeButton("Turn on Wi-Fi mode (plug in USB first)", 20, 318, 520, 36, false);
+            savedCombo = new ComboBox();
+            savedCombo.Location = new Point(20, 314);
+            savedCombo.Size = new Size(396, 28);
+            savedCombo.DropDownStyle = ComboBoxStyle.DropDownList;
+            savedCombo.FlatStyle = FlatStyle.Flat;
+            savedCombo.BackColor = Card;
+            savedCombo.ForeColor = Fg;
+            savedCombo.Font = new Font("Segoe UI", 9f);
+            savedCombo.DrawMode = DrawMode.OwnerDrawFixed;
+            savedCombo.ItemHeight = 22;
+            savedCombo.DrawItem += delegate(object s, DrawItemEventArgs e)
+            {
+                bool selected = (e.State & DrawItemState.Selected) == DrawItemState.Selected;
+                using (Brush b = new SolidBrush(selected ? Color.FromArgb(36, 36, 36) : Card))
+                {
+                    e.Graphics.FillRectangle(b, e.Bounds);
+                }
+                if (e.Index >= 0)
+                {
+                    string text = savedCombo.Items[e.Index].ToString();
+                    TextRenderer.DrawText(e.Graphics, text, savedCombo.Font, e.Bounds, Fg,
+                        TextFormatFlags.Left | TextFormatFlags.VerticalCenter);
+                }
+            };
+            savedCombo.SelectedIndexChanged += delegate
+            {
+                SavedPhone sp = savedCombo.SelectedItem as SavedPhone;
+                if (sp != null) ipText.Text = sp.Ip;
+            };
+            savedCombo.DoubleClick += delegate { ConnectIp(); };
+            Controls.Add(savedCombo);
+
+            forgetBtn = MakeButton("Forget", 428, 314, 112, 28, false);
+            forgetBtn.Click += delegate { ForgetSavedPhone(); };
+            Controls.Add(forgetBtn);
+
+            wifiBtn = MakeButton("Turn on Wi-Fi mode (plug in USB first)", 20, 352, 520, 36, false);
             wifiBtn.Click += delegate { TurnOnWifi(); };
             Controls.Add(wifiBtn);
 
-            startBtn = MakeButton("Start mirror", 20, 364, 520, 50, true);
+            startBtn = MakeButton("Start mirror", 20, 398, 520, 50, true);
             startBtn.Click += delegate { StartMirror(); };
             Controls.Add(startBtn);
 
-            stopBtn = MakeButton("Stop mirror", 20, 364, 520, 50, false);
+            stopBtn = MakeButton("Stop mirror", 20, 398, 520, 50, false);
             stopBtn.Visible = false;
             stopBtn.Click += delegate { StopMirror(); };
             Controls.Add(stopBtn);
 
-            Controls.Add(MakeLabel("QUALITY", 20, 472, 200, 16, 8f, Muted, true, true));
+            autoCheck = new CheckBox();
+            autoCheck.Text = "Auto-setup and start when a USB phone is plugged in";
+            autoCheck.Location = new Point(20, 452);
+            autoCheck.Size = new Size(520, 24);
+            autoCheck.ForeColor = Fg;
+            autoCheck.BackColor = Bg;
+            autoCheck.FlatStyle = FlatStyle.Flat;
+            autoCheck.Font = new Font("Segoe UI", 9f);
+            autoCheck.Checked = true;
+            autoCheck.CheckedChanged += delegate { SaveSetting("AutoUsb", autoCheck.Checked ? 1 : 0); };
+            Controls.Add(autoCheck);
+
+            Controls.Add(MakeLabel("QUALITY", 20, 484, 200, 16, 8f, Muted, true, true));
 
             qualityCombo = new ComboBox();
-            qualityCombo.Location = new Point(20, 490);
+            qualityCombo.Location = new Point(20, 502);
             qualityCombo.Size = new Size(190, 26);
             qualityCombo.DropDownStyle = ComboBoxStyle.DropDownList;
             qualityCombo.FlatStyle = FlatStyle.Flat;
@@ -337,7 +404,7 @@ namespace Screenless
 
             audioCheck = new CheckBox();
             audioCheck.Text = "Phone audio";
-            audioCheck.Location = new Point(224, 492);
+            audioCheck.Location = new Point(224, 504);
             audioCheck.Size = new Size(130, 24);
             audioCheck.ForeColor = Fg;
             audioCheck.BackColor = Bg;
@@ -348,7 +415,7 @@ namespace Screenless
 
             startupCheck = new CheckBox();
             startupCheck.Text = "Start with Windows";
-            startupCheck.Location = new Point(364, 492);
+            startupCheck.Location = new Point(364, 504);
             startupCheck.Size = new Size(180, 24);
             startupCheck.ForeColor = Fg;
             startupCheck.BackColor = Bg;
@@ -361,10 +428,10 @@ namespace Screenless
             };
             Controls.Add(startupCheck);
 
-            Controls.Add(MakeLabel("LOG", 20, 532, 200, 16, 8f, Muted, true, true));
+            Controls.Add(MakeLabel("LOG", 20, 542, 200, 16, 8f, Muted, true, true));
 
             logBox = new TextBox();
-            logBox.Location = new Point(20, 550);
+            logBox.Location = new Point(20, 560);
             logBox.Size = new Size(520, 100);
             logBox.Multiline = true;
             logBox.ReadOnly = true;
@@ -375,12 +442,12 @@ namespace Screenless
             logBox.Font = new Font("Consolas", 8.4f);
             Controls.Add(logBox);
 
-            toolsLabel = MakeLabel("scrcpy + adb", 20, 664, 300, 20, 8f, Muted, false, true);
+            toolsLabel = MakeLabel("scrcpy + adb", 20, 676, 300, 20, 8f, Muted, false, true);
             Controls.Add(toolsLabel);
 
             LinkLabel github = new LinkLabel();
             github.Text = "GitHub";
-            github.Location = new Point(410, 664);
+            github.Location = new Point(410, 676);
             github.Size = new Size(60, 20);
             github.LinkColor = Red;
             github.ActiveLinkColor = Fg;
@@ -393,7 +460,7 @@ namespace Screenless
 
             LinkLabel guide = new LinkLabel();
             guide.Text = "Guide";
-            guide.Location = new Point(478, 664);
+            guide.Location = new Point(478, 676);
             guide.Size = new Size(62, 20);
             guide.LinkColor = Red;
             guide.ActiveLinkColor = Fg;
@@ -410,6 +477,8 @@ namespace Screenless
             tip.SetToolTip(startBtn, "Open the phone in a window on this laptop.");
             tip.SetToolTip(connectBtn, "Connect over Wi-Fi to the IP above.");
             tip.SetToolTip(qualityCombo, "Auto uses USB quality on cable and lighter quality on Wi-Fi.");
+            tip.SetToolTip(savedCombo, "Phones you have set up. Pick one and press Connect.");
+            tip.SetToolTip(autoCheck, "When a phone is plugged in, save its IP, switch it to Wi-Fi and open the mirror automatically.");
 
             ResumeLayout(false);
         }
@@ -610,6 +679,144 @@ namespace Screenless
             if (WindowState == FormWindowState.Minimized) Hide();
         }
 
+        /* ---------- saved phones ---------- */
+
+        string PhonesFile()
+        {
+            return Path.Combine(Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.LocalApplicationData), "screenless"), "phones.txt");
+        }
+
+        void LoadSavedPhones()
+        {
+            try
+            {
+                string file = PhonesFile();
+                if (File.Exists(file))
+                {
+                    foreach (string line in File.ReadAllLines(file))
+                    {
+                        string[] parts = line.Split('|');
+                        if (parts.Length >= 3 && parts[2].Trim().Length > 0)
+                        {
+                            SavedPhone p = new SavedPhone();
+                            p.Serial = parts[0].Trim();
+                            p.Label = parts[1].Trim();
+                            p.Ip = parts[2].Trim();
+                            savedPhones.Add(p);
+                        }
+                        else if (parts.Length >= 2 && parts[1].Trim().Length > 0)
+                        {
+                            SavedPhone p = new SavedPhone();
+                            p.Label = parts[0].Trim();
+                            p.Ip = parts[1].Trim();
+                            savedPhones.Add(p);
+                        }
+                    }
+                }
+            }
+            catch { }
+            RefreshSavedCombo();
+        }
+
+        void SaveSavedPhones()
+        {
+            try
+            {
+                string file = PhonesFile();
+                Directory.CreateDirectory(Path.GetDirectoryName(file));
+                List<string> lines = new List<string>();
+                foreach (SavedPhone p in savedPhones)
+                {
+                    lines.Add(p.Serial + "|" + p.Label + "|" + p.Ip);
+                }
+                File.WriteAllLines(file, lines.ToArray());
+            }
+            catch { }
+        }
+
+        void RefreshSavedCombo()
+        {
+            UI(delegate
+            {
+                if (savedCombo == null) return;
+                string keep = null;
+                if (savedCombo.SelectedItem is SavedPhone) keep = ((SavedPhone)savedCombo.SelectedItem).Ip;
+                savedCombo.Items.Clear();
+                int select = -1;
+                for (int i = 0; i < savedPhones.Count; i++)
+                {
+                    savedCombo.Items.Add(savedPhones[i]);
+                    if (savedPhones[i].Ip == keep) select = i;
+                }
+                if (select >= 0) savedCombo.SelectedIndex = select;
+            });
+        }
+
+        void AddSavedPhone(string label, string ip, string serial)
+        {
+            if (string.IsNullOrEmpty(ip)) return;
+            string clean = string.IsNullOrEmpty(label) ? "Phone" : label.Replace("_", " ").Trim();
+            SavedPhone found = null;
+
+            if (!string.IsNullOrEmpty(serial))
+            {
+                foreach (SavedPhone p in savedPhones)
+                {
+                    if (p.Serial == serial) { found = p; break; }
+                }
+            }
+            if (found == null)
+            {
+                foreach (SavedPhone p in savedPhones)
+                {
+                    if (!string.IsNullOrEmpty(p.Label) && p.Label.Equals(clean, StringComparison.OrdinalIgnoreCase))
+                    {
+                        found = p;
+                        break;
+                    }
+                }
+            }
+            if (found == null)
+            {
+                foreach (SavedPhone p in savedPhones)
+                {
+                    if (p.Ip == ip) { found = p; break; }
+                }
+            }
+            if (found == null)
+            {
+                found = new SavedPhone();
+                savedPhones.Add(found);
+            }
+
+            found.Label = clean;
+            found.Ip = ip;
+            if (!string.IsNullOrEmpty(serial)) found.Serial = serial;
+
+            SaveSavedPhones();
+            RefreshSavedCombo();
+            UI(delegate
+            {
+                ipText.Text = ip;
+                if (savedCombo != null) savedCombo.SelectedItem = found;
+            });
+            Log("Saved phone: " + clean + " (" + ip + ")");
+        }
+
+        void ForgetSavedPhone()
+        {
+            SavedPhone p = savedCombo.SelectedItem as SavedPhone;
+            if (p == null)
+            {
+                Log("Pick a saved phone first.");
+                return;
+            }
+            savedPhones.Remove(p);
+            SaveSavedPhones();
+            RefreshSavedCombo();
+            Log("Forgot " + p.Label + " (" + p.Ip + ").");
+        }
+
         /* ---------- settings ---------- */
 
         void LoadSettings()
@@ -620,6 +827,7 @@ namespace Screenless
                 string ip = "";
                 int quality = 0;
                 int audio = 0;
+                int autoUsb = 1;
                 if (k != null)
                 {
                     object v = k.GetValue("LastIp");
@@ -628,6 +836,8 @@ namespace Screenless
                     if (v != null) quality = Convert.ToInt32(v);
                     v = k.GetValue("Audio");
                     if (v != null) audio = Convert.ToInt32(v);
+                    v = k.GetValue("AutoUsb");
+                    if (v != null) autoUsb = Convert.ToInt32(v);
                     k.Close();
                 }
                 if (ip.Length == 0)
@@ -639,6 +849,7 @@ namespace Screenless
                 if (quality < 0 || quality > 2) quality = 0;
                 qualityCombo.SelectedIndex = quality;
                 audioCheck.Checked = audio == 1;
+                autoCheck.Checked = autoUsb == 1;
                 startupCheck.Checked = IsStartupEnabled();
             }
             catch { }
@@ -961,6 +1172,7 @@ namespace Screenless
             if (devices.Count > 0) deviceCombo.SelectedIndex = select;
             UpdateStatus();
             UpdateMirrorUi();
+            HandleAutoUsb();
         }
 
         Device SelectedDevice()
@@ -1025,14 +1237,113 @@ namespace Screenless
             if (stopBtn != null) { stopBtn.Visible = running; stopBtn.Enabled = running; }
             if (wifiBtn != null) { wifiBtn.Enabled = !working && adb != null; }
             if (connectBtn != null) { connectBtn.Enabled = !working && adb != null; }
+            if (savedCombo != null) { savedCombo.Enabled = !working; }
+            if (forgetBtn != null) { forgetBtn.Enabled = !working && savedCombo != null && savedCombo.SelectedItem != null; }
             if (refreshBtn != null) { refreshBtn.Enabled = !working; }
             if (deviceCombo != null) { deviceCombo.Enabled = !working; }
+            if (autoCheck != null) { autoCheck.Enabled = !working; }
         }
 
         void SetWorking(bool value)
         {
             working = value;
             UI(delegate { UpdateMirrorUi(); });
+        }
+
+        /* ---------- auto setup ---------- */
+
+        void HandleAutoUsb()
+        {
+            List<string> present = new List<string>();
+            foreach (Device d in devices)
+            {
+                if (d.Usb) present.Add(d.Serial);
+            }
+            List<string> gone = new List<string>();
+            foreach (string s in autoSetupDone)
+            {
+                if (!present.Contains(s)) gone.Add(s);
+            }
+            foreach (string s in gone) autoSetupDone.Remove(s);
+
+            if (autoCheck == null || !autoCheck.Checked) return;
+            if (working || autoStarting || mirror != null) return;
+
+            foreach (Device d in devices)
+            {
+                if (!d.Usb || d.State != "device") continue;
+                if (autoSetupDone.Contains(d.Serial)) continue;
+                autoSetupDone.Add(d.Serial);
+                AutoSetupAndMirror(d);
+                break;
+            }
+        }
+
+        void AutoSetupAndMirror(Device usb)
+        {
+            autoStarting = true;
+            SetWorking(true);
+            string name = string.IsNullOrEmpty(usb.Model) ? usb.Serial : usb.Model.Replace("_", " ");
+            SetStatus("Setting up " + name, "Saving its IP and switching to Wi-Fi ...", Amber);
+            Log("USB phone detected: " + name + ". Setting it up ...");
+
+            Thread t = new Thread(delegate()
+            {
+                string ip = GetWlanIp(usb.Serial);
+                if (ip != null)
+                {
+                    SaveIp(ip);
+                    AddSavedPhone(usb.Model, ip, usb.Serial);
+                    Log("Phone Wi-Fi IP: " + ip);
+                }
+                else
+                {
+                    Log("Could not read the Wi-Fi IP. Is the phone on Wi-Fi?");
+                }
+
+                string result = Run(adb, "-s " + usb.Serial + " tcpip 5555", 15000);
+                if (result.Length > 0) Log(result);
+
+                bool back = WaitForDevice(usb.Serial, 20000);
+                Run(adb, "-s " + usb.Serial + " shell svc power stayon true", 6000);
+                Run(adb, "-s " + usb.Serial + " shell input keyevent KEYCODE_WAKEUP", 6000);
+
+                bool wifi = false;
+                if (ip != null)
+                {
+                    string target = ip + ":5555";
+                    string conn = Run(adb, "connect " + target, 15000);
+                    if (conn.Length > 0) Log(conn);
+                    wifi = WaitForDevice(target, 10000);
+                }
+
+                autoStarting = false;
+                SetWorking(false);
+
+                if (wifi)
+                {
+                    Device remote = new Device();
+                    remote.Serial = ip + ":5555";
+                    remote.State = "device";
+                    remote.Usb = false;
+                    remote.Model = usb.Model;
+                    Log("Wi-Fi ready at " + ip + ". Opening the mirror ...");
+                    UI(delegate { StartMirrorWith(remote); });
+                }
+                else if (back)
+                {
+                    SetStatus("Wi-Fi mode on", "Unplug the cable, then press Start mirror", Green);
+                    Log("Wi-Fi mode is on. Unplug the cable, then press Start mirror.");
+                }
+                else
+                {
+                    SetStatus("Phone did not reconnect", "Unplug, wait 5 seconds, plug in again", Red);
+                    Log("The phone did not come back. Unplug it, wait 5 seconds, plug it in again.");
+                }
+                RefreshDevices();
+            });
+            t.IsBackground = true;
+            t.Start();
         }
 
         /* ---------- actions ---------- */
@@ -1057,6 +1368,7 @@ namespace Screenless
                 if (ip != null)
                 {
                     SaveIp(ip);
+                    AddSavedPhone(usb.Model, ip, usb.Serial);
                     Log("Phone Wi-Fi IP: " + ip);
                 }
                 else
@@ -1132,7 +1444,12 @@ namespace Screenless
                 string output = Run(adb, "connect " + target, 15000);
                 Log(output);
                 bool ok = WaitForDevice(target, 10000);
-                if (ok) SaveIp(ip);
+                if (ok)
+                {
+                    SaveIp(ip);
+                    string model = Run(adb, "-s " + target + " shell getprop ro.product.model", 6000).Trim();
+                    AddSavedPhone(model, ip, "");
+                }
                 SetWorking(false);
                 if (ok)
                 {
@@ -1170,6 +1487,11 @@ namespace Screenless
 
         void StartMirror()
         {
+            StartMirrorWith(null);
+        }
+
+        void StartMirrorWith(Device forced)
+        {
             if (mirror != null) return;
             if (string.IsNullOrEmpty(scrcpy) || string.IsNullOrEmpty(adb))
             {
@@ -1177,7 +1499,8 @@ namespace Screenless
                 return;
             }
 
-            Device target = SelectedDevice();
+            Device target = forced;
+            if (target == null) target = SelectedDevice();
             if (target == null) target = FirstDevice();
             if (target == null)
             {
